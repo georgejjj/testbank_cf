@@ -1,218 +1,125 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block title %}Instructor Dashboard - TestBank{% endblock %}
-{% block nav_dashboard %}active{% endblock %}
-
 {% block content %}
-<h2 class="mb-4">Instructor Dashboard</h2>
-
-<!-- Stats Row -->
-<div class="row mb-4">
-  <div class="col-md-3">
-    <div class="card text-bg-primary shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Total Assignments</h6>
-        <h2 class="mb-0">{{ total_assignments }}</h2>
-      </div>
+<div class="page-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2>Instructor Dashboard</h2>
+        <p class="page-subtitle">{{ total_students }} student{{ total_students|pluralize }} enrolled</p>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-success shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Published</h6>
-        <h2 class="mb-0">{{ published_count }}</h2>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-info shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Total Students</h6>
-        <h2 class="mb-0">{{ total_students }}</h2>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-bg-warning shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Questions in Bank</h6>
-        <h2 class="mb-0">{{ total_questions }}</h2>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Assignment Table -->
-<div class="card shadow-sm mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Assignments</h5>
-    <a href="{% url 'assignment_create' %}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg"></i> Create Assignment
+    <a href="{% url 'assignment_create' %}" class="btn btn-gold">
+        <i class="bi bi-plus-lg me-1"></i>Create Assignment
     </a>
-  </div>
-  <div class="card-body p-0">
+</div>
+
+<!-- Assignments Table -->
+<div class="card mb-4 fade-in">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-check me-2"></i>Assignments</span>
+        <a href="{% url 'grade_free_response' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil-square me-1"></i>Grade Free Response
+        </a>
+    </div>
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Title</th>
-            <th>Mode</th>
-            <th>Questions</th>
-            <th>Status</th>
-            <th>Completed</th>
-            <th>Avg Score</th>
-            <th class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for a in assignments %}
-          <tr>
-            <td>
-              <a href="{% url 'assignment_detail' a.pk %}">{{ a.title }}</a>
-            </td>
-            <td>
-              <span class="badge bg-{% if a.mode == 'ASSIGNMENT' %}primary{% else %}secondary{% endif %}">
-                {{ a.get_mode_display }}
-              </span>
-            </td>
-            <td>{{ a.num_questions }}</td>
-            <td>
-              {% if a.is_published %}
-              <span class="badge bg-success">Published</span>
-              {% else %}
-              <span class="badge bg-secondary">Draft</span>
-              {% endif %}
-            </td>
-            <td>{{ a.completed_count }}</td>
-            <td>
-              {% if a.avg_score is not None %}
-                {{ a.avg_score|floatformat:1 }}%
-              {% else %}
-                &mdash;
-              {% endif %}
-            </td>
-            <td class="text-end">
-              <form method="post" action="{% url 'assignment_publish' a.pk %}" class="d-inline">
-                {% csrf_token %}
-                {% if a.is_published %}
-                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Unpublish">
-                  <i class="bi bi-eye-slash"></i> Unpublish
-                </button>
-                {% else %}
-                <button type="submit" class="btn btn-sm btn-outline-success" title="Publish">
-                  <i class="bi bi-eye"></i> Publish
-                </button>
-                {% endif %}
-              </form>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="text-center text-muted py-4">
-              No assignments yet. Create one to get started.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- Grade Free Response Link -->
-{% if ungraded_count > 0 %}
-<div class="alert alert-warning">
-  <i class="bi bi-pencil-square"></i>
-  You have <strong>{{ ungraded_count }}</strong> ungraded free-response answer{{ ungraded_count|pluralize }}.
-  <a href="{% url 'grade_free_response' %}" class="alert-link">Grade now</a>
-</div>
-{% endif %}
-
-<div class="row">
-  <!-- Score Distribution Chart -->
-  <div class="col-lg-6 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h5 class="mb-0">Score Distribution</h5>
-      </div>
-      <div class="card-body">
-        <canvas id="scoreDistChart" height="250"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Student Summary Table -->
-  <div class="col-lg-6 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h5 class="mb-0">Student Summary</h5>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
-          <table class="table table-sm table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Student</th>
-                <th>Completed</th>
-                <th>Avg Score</th>
-              </tr>
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Mode</th>
+                    <th>Questions</th>
+                    <th>Status</th>
+                    <th>Completed</th>
+                    <th>Avg Score</th>
+                    <th class="text-end">Actions</th>
+                </tr>
             </thead>
             <tbody>
-              {% for s in student_summary %}
-              <tr>
-                <td>{{ s.name }}</td>
-                <td>{{ s.completed }}</td>
+            {% for a in assignments %}
+            <tr>
+                <td><a href="{% url 'assignment_detail' a.pk %}" class="fw-600" style="text-decoration:none;">{{ a.title }}</a></td>
+                <td><span class="badge badge-section">{{ a.get_mode_display }}</span></td>
+                <td>{{ a.num_questions }}</td>
                 <td>
-                  {% if s.avg_score is not None %}
-                    {{ s.avg_score|floatformat:1 }}%
-                  {% else %}
-                    &mdash;
-                  {% endif %}
+                    {% if a.is_published %}
+                    <span class="badge" style="background: var(--success-bg); color: var(--success);">Published</span>
+                    {% else %}
+                    <span class="badge" style="background: var(--warm-bg); color: var(--text-muted);">Draft</span>
+                    {% endif %}
                 </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="3" class="text-center text-muted py-3">No data yet.</td>
-              </tr>
-              {% endfor %}
+                <td>{{ a.completed_count }}/{{ a.student_count }}</td>
+                <td>
+                    {% if a.avg_score is not None %}
+                    <span class="score-display"><span class="score-value" style="font-size:1rem;">{{ a.avg_score|floatformat:1 }}</span><span class="score-max">/{{ a.num_questions }}</span></span>
+                    {% else %}&mdash;{% endif %}
+                </td>
+                <td class="text-end">
+                    <form method="post" action="{% url 'assignment_publish' a.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm {% if a.is_published %}btn-outline-secondary{% else %}btn-gold{% endif %}">
+                            {% if a.is_published %}Unpublish{% else %}Publish{% endif %}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No assignments yet. Create one to get started.</td></tr>
+            {% endfor %}
             </tbody>
-          </table>
-        </div>
-      </div>
+        </table>
     </div>
-  </div>
+</div>
+
+<!-- Charts & Student Summary -->
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="chart-card fade-in">
+            <h5><i class="bi bi-bar-chart me-2" style="color: var(--gold);"></i>Score Distribution</h5>
+            <canvas id="scoreDistChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card fade-in">
+            <div class="card-header"><i class="bi bi-people me-2"></i>Student Summary</div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Student</th><th>Completed</th><th>Avg Score</th><th>Time (min)</th></tr></thead>
+                    <tbody>
+                    {% for s in student_summaries %}
+                    <tr>
+                        <td>{{ s.name }}</td>
+                        <td>{{ s.completed }}</td>
+                        <td>{% if s.avg_score is not None %}{{ s.avg_score|floatformat:0 }}%{% else %}&mdash;{% endif %}</td>
+                        <td>{{ s.total_time_min }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
-  const scoreData = {{ score_distribution|safe }};
-  new Chart(document.getElementById('scoreDistChart'), {
-    type: 'bar',
-    data: {
-      labels: scoreData.labels,
-      datasets: [{
-        label: 'Number of Students',
-        data: scoreData.counts,
-        backgroundColor: 'rgba(13, 110, 253, 0.7)',
-        borderColor: 'rgba(13, 110, 253, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { stepSize: 1 }
+const dist = {{ score_distribution|safe }};
+if (dist.length) {
+    new Chart(document.getElementById('scoreDistChart'), {
+        type: 'bar',
+        data: {
+            labels: ['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'],
+            datasets: [{
+                label: 'Students',
+                data: dist,
+                backgroundColor: '#d4a843',
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            plugins: { legend: { display: false } }
         }
-      },
-      plugins: {
-        legend: { display: false }
-      }
-    }
-  });
+    });
+}
 </script>
 {% endblock %}

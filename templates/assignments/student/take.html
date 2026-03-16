@@ -1,74 +1,59 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ sa.assignment.title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .choice-option {
-        padding: 0.75rem 1rem;
-        margin: 0.4rem 0;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        border: 2px solid #dee2e6;
-        transition: all 0.15s ease;
-    }
-    .choice-option:hover {
-        background-color: #e9ecef;
-        border-color: #adb5bd;
-    }
-    .choice-option.selected {
-        background-color: #cfe2ff;
-        border-color: #0d6efd;
-    }
-    .question-nav-btn {
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .question-nav-btn.answered {
-        background-color: #198754 !important;
-        border-color: #198754 !important;
-        color: #fff !important;
-    }
-    .question-nav-btn.current {
-        border: 3px solid #0d6efd !important;
-    }
-</style>
-{% endblock %}
+{% block title %}{{ sa.assignment.title }} - TestBank{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Left Sidebar -->
-    <div class="col-lg-2 mb-3">
-        <div class="card shadow-sm mb-3">
-            <div class="card-header"><h6 class="mb-0">Questions</h6></div>
-            <div class="card-body">
-                <div class="d-flex flex-wrap gap-1">
-                    {% for q in questions %}
-                    <a href="?q={{ forloop.counter0 }}"
-                       class="btn btn-outline-secondary question-nav-btn
-                              {% if q.id in answered_ids %}answered{% endif %}
-                              {% if forloop.counter0 == question_idx %}current{% endif %}">
-                        {{ forloop.counter }}
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
+<div class="row g-3">
+  <!-- Left Sidebar -->
+  <div class="col-lg-2 mb-3">
+    <!-- Question Nav -->
+    <div class="card mb-3">
+      <div class="card-header" style="font-size: 0.85rem;">
+        <i class="bi bi-list-ol me-1"></i>Questions
+      </div>
+      <div class="card-body py-2 px-3">
+        <div class="d-flex flex-wrap gap-1">
+          {% for q in questions %}
+          <a href="?q={{ forloop.counter0 }}"
+             class="btn question-nav-btn
+                    {% if q.id in answered_ids %}answered{% endif %}
+                    {% if forloop.counter0 == question_idx %}current{% endif %}">
+            {{ forloop.counter }}
+          </a>
+          {% endfor %}
         </div>
-        <div class="card shadow-sm">
-            <div class="card-body text-center">
-                <div class="timer-display fs-4 font-monospace" id="timer">00:00</div>
-                <small class="text-muted">Time on question</small>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <!-- Main Question Area -->
-    <div class="col-lg-10" id="question-panel">
-        {% include "assignments/student/_question.html" %}
+    <!-- Timer -->
+    <div class="card timer-card">
+      <div class="card-body text-center py-3">
+        <div class="timer-display" id="timer">00:00</div>
+        <div class="timer-label mt-1">Question Time</div>
+      </div>
     </div>
+
+    <!-- Progress -->
+    <div class="card mt-3">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between" style="font-size:0.8rem; color: var(--text-secondary);">
+          <span>Progress</span>
+          <span>{{ answered_ids|length }}/{{ total_questions }}</span>
+        </div>
+        <div class="progress mt-1" style="height: 6px; border-radius: 3px;">
+          <div class="progress-bar" role="progressbar"
+               style="width: {% widthratio answered_ids|length total_questions 100 %}%; background: var(--success);"
+               aria-valuenow="{{ answered_ids|length }}" aria-valuemin="0" aria-valuemax="{{ total_questions }}">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Question Area -->
+  <div class="col-lg-10" id="question-panel">
+    {% include "assignments/student/_question.html" %}
+  </div>
 </div>
 {% endblock %}
 

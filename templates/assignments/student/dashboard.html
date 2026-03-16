@@ -1,113 +1,91 @@
 {% extends "base.html" %}
-
-{% block title %}Student Dashboard - TestBank{% endblock %}
-{% block nav_sdashboard %}active{% endblock %}
-
+{% block title %}Dashboard - TestBank{% endblock %}
 {% block content %}
-<h2 class="mb-4">Welcome, {{ user.first_name|default:user.username }}!</h2>
+<div class="page-header">
+  <h2>Welcome back, {{ user.first_name|default:user.username }}</h2>
+  <p class="page-subtitle">Here's your study overview</p>
+</div>
 
-<!-- Stats Cards -->
-<div class="row mb-4">
-  <div class="col-md-4">
-    <div class="card text-bg-primary shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Completed Assignments</h6>
-        <h2 class="mb-0">{{ completed_count }}</h2>
-      </div>
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3 fade-in fade-in-1">
+    <div class="stat-card">
+      <div class="stat-value">{{ total_completed }}</div>
+      <div class="stat-label">Completed</div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card text-bg-success shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Average Score</h6>
-        <h2 class="mb-0">
-          {% if avg_score is not None %}{{ avg_score|floatformat:1 }}%{% else %}&mdash;{% endif %}
-        </h2>
-      </div>
+  <div class="col-6 col-md-3 fade-in fade-in-2">
+    <div class="stat-card accent">
+      <div class="stat-value">{% if avg_score_pct is not None %}{{ avg_score_pct }}%{% else %}&mdash;{% endif %}</div>
+      <div class="stat-label">Average Score</div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card text-bg-warning shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title">Mistakes to Review</h6>
-        <h2 class="mb-0">{{ mistakes_count }}</h2>
-        {% if mistakes_count > 0 %}
-        <a href="{% url 'mistake_collection' %}" class="text-dark small">Review now</a>
-        {% endif %}
-      </div>
+  <div class="col-6 col-md-3 fade-in fade-in-3">
+    <div class="stat-card">
+      <div class="stat-value">{{ mistake_count }}</div>
+      <div class="stat-label"><a href="{% url 'mistake_collection' %}" style="text-decoration:none; color:inherit;">Mistakes to Review</a></div>
     </div>
+  </div>
+  <div class="col-6 col-md-3 fade-in fade-in-4">
+    <a href="{% url 'practice_setup' %}" class="text-decoration-none">
+      <div class="stat-card" style="border-color: var(--gold); cursor:pointer;">
+        <div style="font-size:1.5rem; color: var(--gold);"><i class="bi bi-lightning-fill"></i></div>
+        <div class="stat-label" style="color: var(--gold); font-weight:700;">Start Practice</div>
+      </div>
+    </a>
   </div>
 </div>
 
-<div class="row">
-  <!-- Active Assignments -->
-  <div class="col-lg-7 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h5 class="mb-0">Active Assignments</h5>
-      </div>
-      <div class="list-group list-group-flush">
-        {% for sa in active_assignments %}
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="mb-1">{{ sa.assignment.title }}</h6>
-            <small class="text-muted">
-              {% if sa.assignment.due_date %}
-                Due: {{ sa.assignment.due_date|date:"M d, Y g:i A" }}
-              {% else %}
-                No due date
-              {% endif %}
-            </small>
-          </div>
-          <div>
-            {% if sa.status == "NOT_STARTED" %}
-            <a href="{% url 'take_assignment' sa.pk %}" class="btn btn-primary btn-sm">
-              <i class="bi bi-play-fill"></i> Start
-            </a>
-            {% elif sa.status == "IN_PROGRESS" %}
-            <a href="{% url 'take_assignment' sa.pk %}" class="btn btn-warning btn-sm">
-              <i class="bi bi-pencil-fill"></i> Continue
-            </a>
-            {% endif %}
-          </div>
+<!-- Active Assignments + Recent Results -->
+<div class="row g-4">
+  <div class="col-lg-7">
+    <h5 style="font-family: var(--font-display); margin-bottom: 1rem;">
+      <i class="bi bi-journal-text me-2" style="color: var(--gold);"></i>Active Assignments
+    </h5>
+    {% for sa in active %}
+    <div class="assignment-card fade-in">
+      <div>
+        <div class="assignment-title">{{ sa.assignment.title }}</div>
+        <div class="assignment-meta">
+          {% if sa.assignment.due_date %}
+          <i class="bi bi-clock me-1"></i>Due {{ sa.assignment.due_date|date:"M d, g:i A" }}
+          {% else %}
+          <span>No deadline</span>
+          {% endif %}
+          &middot; {{ sa.max_score }} question{{ sa.max_score|pluralize }}
         </div>
-        {% empty %}
-        <div class="list-group-item text-center text-muted py-4">
-          No active assignments right now.
-        </div>
-        {% endfor %}
       </div>
+      <a href="{% url 'take_assignment' sa.pk %}" class="btn {% if sa.status == 'IN_PROGRESS' %}btn-gold{% else %}btn-primary{% endif %} btn-sm">
+        {% if sa.status == 'IN_PROGRESS' %}<i class="bi bi-pencil-fill me-1"></i>Continue{% else %}<i class="bi bi-play-fill me-1"></i>Start{% endif %}
+      </a>
     </div>
+    {% empty %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-check-circle" style="font-size:2rem; opacity:0.3;"></i>
+      <p class="mt-2">No active assignments. You're all caught up!</p>
+    </div>
+    {% endfor %}
   </div>
 
-  <!-- Recent Results -->
-  <div class="col-lg-5 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h5 class="mb-0">Recent Results</h5>
-      </div>
-      <div class="list-group list-group-flush">
-        {% for sa in recent_results %}
-        <a href="{% url 'assignment_result' sa.pk %}"
-           class="list-group-item list-group-item-action">
-          <div class="d-flex justify-content-between">
-            <h6 class="mb-1">{{ sa.assignment.title }}</h6>
-            <span class="badge bg-{% if sa.score_percent >= 70 %}success{% elif sa.score_percent >= 50 %}warning text-dark{% else %}danger{% endif %}">
-              {{ sa.score_percent|floatformat:0 }}%
-            </span>
-          </div>
-          <small class="text-muted">
-            {{ sa.completed_at|date:"M d, Y" }} &middot;
-            {{ sa.score }}/{{ sa.max_score }}
-          </small>
-        </a>
-        {% empty %}
-        <div class="list-group-item text-center text-muted py-4">
-          No results yet. Complete an assignment to see your scores.
+  <div class="col-lg-5">
+    <h5 style="font-family: var(--font-display); margin-bottom: 1rem;">
+      <i class="bi bi-trophy me-2" style="color: var(--gold);"></i>Recent Results
+    </h5>
+    {% for sa in completed %}
+    <div class="assignment-card fade-in">
+      <div>
+        <div class="assignment-title">{{ sa.assignment.title }}</div>
+        <div class="score-display">
+          <span class="score-value">{{ sa.score }}</span><span class="score-max">/{{ sa.max_score }}</span>
         </div>
-        {% endfor %}
       </div>
+      <a href="{% url 'assignment_result' sa.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-eye me-1"></i>View
+      </a>
     </div>
+    {% empty %}
+    <div class="text-center py-4 text-muted"><p>No completed assignments yet.</p></div>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}

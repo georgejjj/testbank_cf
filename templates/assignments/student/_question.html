@@ -1,35 +1,42 @@
-<div class="card shadow-sm">
+<div class="card fade-in" style="border-radius: var(--radius-lg);">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Question {{ question_idx|add:1 }} of {{ total_questions }}</span>
-        <div>
-            <span class="badge bg-info">{{ question.get_question_type_display }}</span>
-            <span class="badge bg-warning text-dark">Diff {{ question.difficulty }}</span>
+        <span style="font-family: var(--font-display); font-size: 1.1rem;">
+            Question {{ question_idx|add:1 }}
+            <span style="color: var(--text-muted); font-family: var(--font-body); font-size: 0.85rem;">
+                of {{ total_questions }}
+            </span>
+        </span>
+        <div class="d-flex gap-1">
+            <span class="badge badge-type">{{ question.get_question_type_display }}</span>
+            <span class="badge badge-difficulty-{{ question.difficulty }}">
+                {% if question.difficulty == 1 %}Easy{% elif question.difficulty == 2 %}Medium{% else %}Hard{% endif %}
+            </span>
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
 
         {% if question.context_group and question.context_group.text|length > 60 %}
-        <div class="alert alert-light border mb-3">
-            <small class="text-muted d-block mb-1">Reference Information:</small>
+        <div class="context-block">
+            <div class="context-label">Reference Information</div>
             {{ question.context_group.text|safe }}
         </div>
         {% endif %}
+
         {% if question.context_group and question.context_group.image %}
         <div class="mb-3">
-            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid" style="max-height: 250px;">
+            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid rounded" style="max-height: 250px;">
         </div>
         {% endif %}
 
         {% if question.image %}
         <div class="mb-3">
-            <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid" style="max-height: 300px;">
+            <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid rounded" style="max-height: 300px;">
         </div>
         {% endif %}
 
-        <p class="fs-5 mb-4" style="line-height: 1.6;">{{ question.text }}</p>
+        <p class="question-text">{{ question.text }}</p>
 
         {% if question.question_type == 'MC' %}
-            {# MC: Click to select AND auto-submit #}
             {% for choice in choices %}
             <form method="post" action="{% url 'submit_answer' sa.pk %}" class="mc-form">
                 {% csrf_token %}
@@ -39,13 +46,16 @@
                 <input type="hidden" name="choice_id" value="{{ choice.id }}">
                 <div class="choice-option {% if existing_answer and existing_answer.selected_choice_id == choice.id %}selected{% endif %}"
                      onclick="submitMC(this);">
-                    <strong>{{ choice.display_letter }})</strong> {{ choice.text }}
+                    <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.display_letter }})</strong>
+                    {{ choice.text }}
                 </div>
             </form>
             {% endfor %}
 
             {% if existing_answer %}
-            <div class="text-success mt-2"><small>Answer saved. Use Previous/Next to navigate.</small></div>
+            <div class="mt-2" style="color: var(--success); font-size: 0.85rem;">
+                <i class="bi bi-check-circle-fill me-1"></i>Answer saved
+            </div>
             {% endif %}
 
         {% elif question.question_type == 'NUMERIC' %}
@@ -55,14 +65,14 @@
                 <input type="hidden" name="question_idx" value="{{ question_idx }}">
                 <input type="hidden" name="time_spent" id="time-spent-input" value="0">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Your answer (numeric value):</label>
+                    <label class="form-label">Your answer:</label>
                     <input type="text" name="numeric_answer" class="form-control" style="max-width: 300px;"
                            placeholder="e.g. $254,641 or -1234.56"
                            value="{{ existing_answer.numeric_answer|default:'' }}">
                 </div>
                 <button type="submit" class="btn btn-primary"
                         onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
-                    Save Answer
+                    <i class="bi bi-check2 me-1"></i>Save Answer
                 </button>
             </form>
 
@@ -73,53 +83,54 @@
                 <input type="hidden" name="question_idx" value="{{ question_idx }}">
                 <input type="hidden" name="time_spent" id="time-spent-input" value="0">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Your answer:</label>
+                    <label class="form-label">Your answer:</label>
                     <textarea name="text_answer" class="form-control" rows="5"
-                              maxlength="5000">{{ existing_answer.text_answer|default:'' }}</textarea>
-                    <small class="text-muted">Max 5000 characters</small>
+                              maxlength="5000" placeholder="Type your answer here...">{{ existing_answer.text_answer|default:'' }}</textarea>
+                    <small class="text-muted">Max 5,000 characters</small>
                 </div>
                 <button type="submit" class="btn btn-primary"
                         onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
-                    Save Answer
+                    <i class="bi bi-check2 me-1"></i>Save Answer
                 </button>
             </form>
         {% endif %}
 
-        <hr>
-        <div class="d-flex justify-content-between mt-2">
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mt-4 pt-3" style="border-top: 1px solid var(--warm-border);">
             {% if question_idx > 0 %}
-            <a href="?q={{ question_idx|add:-1 }}" class="btn btn-outline-secondary">Previous</a>
+            <a href="?q={{ question_idx|add:-1 }}" class="btn btn-outline-secondary">
+                <i class="bi bi-chevron-left me-1"></i>Previous
+            </a>
             {% else %}<span></span>{% endif %}
 
             {% if question_idx < total_questions|add:-1 %}
-            <a href="?q={{ question_idx|add:1 }}" class="btn btn-outline-secondary">Next</a>
+            <a href="?q={{ question_idx|add:1 }}" class="btn btn-outline-secondary">
+                Next<i class="bi bi-chevron-right ms-1"></i>
+            </a>
             {% else %}<span></span>{% endif %}
         </div>
 
         {% if question_idx == total_questions|add:-1 %}
-        <hr>
-        <form method="post" action="{% url 'complete_assignment' sa.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success w-100 py-2"
-                    onclick="return confirm('Submit assignment? You cannot change answers after this.')">
-                Submit Assignment
-            </button>
-        </form>
+        <div class="mt-3">
+            <form method="post" action="{% url 'complete_assignment' sa.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success w-100 py-2"
+                        style="font-size: 1rem;"
+                        onclick="return confirm('Submit assignment? You cannot change answers after this.')">
+                    <i class="bi bi-send-fill me-2"></i>Submit Assignment
+                </button>
+            </form>
+        </div>
         {% endif %}
     </div>
 </div>
 
 <script>
 function submitMC(el) {
-    // Visual feedback immediately
     document.querySelectorAll('.choice-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
-
-    // Set timer value
     el.closest('form').querySelector('.time-spent-field').value =
         (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0;
-
-    // Auto-submit after brief visual feedback
-    setTimeout(() => el.closest('form').submit(), 150);
+    setTimeout(() => el.closest('form').submit(), 200);
 }
 </script>

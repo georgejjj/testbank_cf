@@ -1,42 +1,35 @@
 {% extends "base.html" %}
-
 {% block title %}Login - TestBank{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow">
-      <div class="card-body p-4">
-        <h3 class="card-title text-center mb-4">Sign In</h3>
-
-        {% if form.errors %}
-        <div class="alert alert-danger">
-          Invalid username or password. Please try again.
+<div class="login-card card fade-in">
+    <div class="login-header">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">
+            <i class="bi bi-mortarboard-fill"></i>
         </div>
-        {% endif %}
-
-        <form method="post" action="{% url 'login' %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ next }}">
-
-          <div class="mb-3">
-            <label for="id_username" class="form-label">Username</label>
-            <input type="text" name="username" id="id_username"
-                   class="form-control" autofocus required>
-          </div>
-
-          <div class="mb-3">
-            <label for="id_password" class="form-label">Password</label>
-            <input type="password" name="password" id="id_password"
-                   class="form-control" required>
-          </div>
-
-          <div class="d-grid">
-            <button type="submit" class="btn btn-primary btn-lg">Login</button>
-          </div>
-        </form>
-      </div>
+        <h3>TestBank</h3>
+        <div class="login-subtitle">Corporate Finance Question Bank</div>
     </div>
-  </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" style="font-size: 0.9rem;">
+                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-2" style="font-size: 1rem;">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}
