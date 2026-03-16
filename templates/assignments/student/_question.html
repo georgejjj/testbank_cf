@@ -1,76 +1,104 @@
-<div class="card">
-    <div class="card-header d-flex justify-content-between">
-        <span>Question {{ question_idx|add:1 }} of {{ total_questions }}</span>
-        <span class="badge bg-info">{{ question.get_question_type_display }}</span>
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Question {{ question_idx|add:1 }} of {{ total_questions }}</span>
+        <div>
+            <span class="badge bg-info">{{ question.get_question_type_display }}</span>
+            <span class="badge bg-warning text-dark">Diff {{ question.difficulty }}</span>
+        </div>
     </div>
     <div class="card-body">
-        {% if question.context_group %}
-        <div class="alert alert-light">
+
+        {% if question.context_group and question.context_group.text %}
+        <div class="alert alert-light border mb-3">
+            <small class="text-muted d-block mb-1">Reference Information:</small>
             {{ question.context_group.text|safe }}
             {% if question.context_group.image %}
-            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid mt-2">
+            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid mt-2" style="max-height: 250px;">
             {% endif %}
         </div>
         {% endif %}
 
         {% if question.image %}
-        <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid mb-3" style="max-height: 300px;">
+        <div class="mb-3">
+            <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid" style="max-height: 300px;">
+        </div>
         {% endif %}
 
-        <p class="fs-5">{{ question.text }}</p>
+        <p class="fs-5 mb-4" style="line-height: 1.6;">{{ question.text }}</p>
 
-        <form method="post" action="{% url 'submit_answer' sa.pk %}" id="answer-form">
-            {% csrf_token %}
-            <input type="hidden" name="question_id" value="{{ question.id }}">
-            <input type="hidden" name="question_idx" value="{{ question_idx }}">
-            <input type="hidden" name="time_spent" id="time-spent-input" value="0">
-
-            {% if question.question_type == 'MC' %}
-                {% for choice in choices %}
+        {% if question.question_type == 'MC' %}
+            {# MC: Click to select AND auto-submit #}
+            {% for choice in choices %}
+            <form method="post" action="{% url 'submit_answer' sa.pk %}" class="mc-form">
+                {% csrf_token %}
+                <input type="hidden" name="question_id" value="{{ question.id }}">
+                <input type="hidden" name="question_idx" value="{{ question_idx }}">
+                <input type="hidden" name="time_spent" value="0" class="time-spent-field">
+                <input type="hidden" name="choice_id" value="{{ choice.id }}">
                 <div class="choice-option {% if existing_answer and existing_answer.selected_choice_id == choice.id %}selected{% endif %}"
-                     onclick="selectChoice(this, {{ choice.id }})">
-                    <input type="radio" name="choice_id" value="{{ choice.id }}" class="d-none"
-                           {% if existing_answer and existing_answer.selected_choice_id == choice.id %}checked{% endif %}>
+                     onclick="submitMC(this);">
                     <strong>{{ choice.display_letter }})</strong> {{ choice.text }}
                 </div>
-                {% endfor %}
-            {% elif question.question_type == 'NUMERIC' %}
+            </form>
+            {% endfor %}
+
+            {% if existing_answer %}
+            <div class="text-success mt-2"><small>Answer saved. Use Previous/Next to navigate.</small></div>
+            {% endif %}
+
+        {% elif question.question_type == 'NUMERIC' %}
+            <form method="post" action="{% url 'submit_answer' sa.pk %}" id="answer-form">
+                {% csrf_token %}
+                <input type="hidden" name="question_id" value="{{ question.id }}">
+                <input type="hidden" name="question_idx" value="{{ question_idx }}">
+                <input type="hidden" name="time_spent" id="time-spent-input" value="0">
                 <div class="mb-3">
-                    <label class="form-label">Your answer (numeric value):</label>
+                    <label class="form-label fw-bold">Your answer (numeric value):</label>
                     <input type="text" name="numeric_answer" class="form-control" style="max-width: 300px;"
                            placeholder="e.g. $254,641 or -1234.56"
                            value="{{ existing_answer.numeric_answer|default:'' }}">
                 </div>
-            {% else %}
-                <div class="mb-3">
-                    <label class="form-label">Your answer:</label>
-                    <textarea name="text_answer" class="form-control" rows="5"
-                              maxlength="5000">{{ existing_answer.text_answer|default:'' }}</textarea>
-                    <small class="text-muted">Max 5000 characters</small>
-                </div>
-            {% endif %}
-
-            <div class="d-flex justify-content-between mt-3">
-                {% if question_idx > 0 %}
-                <a href="?q={{ question_idx|add:-1 }}" class="btn btn-outline-secondary">Previous</a>
-                {% else %}<span></span>{% endif %}
-
                 <button type="submit" class="btn btn-primary"
                         onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
                     Save Answer
                 </button>
+            </form>
 
-                {% if question_idx < total_questions|add:-1 %}
-                <a href="?q={{ question_idx|add:1 }}" class="btn btn-outline-secondary">Next</a>
-                {% else %}<span></span>{% endif %}
-            </div>
-        </form>
+        {% else %}
+            <form method="post" action="{% url 'submit_answer' sa.pk %}" id="answer-form">
+                {% csrf_token %}
+                <input type="hidden" name="question_id" value="{{ question.id }}">
+                <input type="hidden" name="question_idx" value="{{ question_idx }}">
+                <input type="hidden" name="time_spent" id="time-spent-input" value="0">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Your answer:</label>
+                    <textarea name="text_answer" class="form-control" rows="5"
+                              maxlength="5000">{{ existing_answer.text_answer|default:'' }}</textarea>
+                    <small class="text-muted">Max 5000 characters</small>
+                </div>
+                <button type="submit" class="btn btn-primary"
+                        onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
+                    Save Answer
+                </button>
+            </form>
+        {% endif %}
+
+        <hr>
+        <div class="d-flex justify-content-between mt-2">
+            {% if question_idx > 0 %}
+            <a href="?q={{ question_idx|add:-1 }}" class="btn btn-outline-secondary">Previous</a>
+            {% else %}<span></span>{% endif %}
+
+            {% if question_idx < total_questions|add:-1 %}
+            <a href="?q={{ question_idx|add:1 }}" class="btn btn-outline-secondary">Next</a>
+            {% else %}<span></span>{% endif %}
+        </div>
 
         {% if question_idx == total_questions|add:-1 %}
         <hr>
         <form method="post" action="{% url 'complete_assignment' sa.pk %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success w-100"
+            <button type="submit" class="btn btn-success w-100 py-2"
                     onclick="return confirm('Submit assignment? You cannot change answers after this.')">
                 Submit Assignment
             </button>
@@ -78,10 +106,18 @@
         {% endif %}
     </div>
 </div>
+
 <script>
-function selectChoice(el, choiceId) {
+function submitMC(el) {
+    // Visual feedback immediately
     document.querySelectorAll('.choice-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
-    el.querySelector('input[type=radio]').checked = true;
+
+    // Set timer value
+    el.closest('form').querySelector('.time-spent-field').value =
+        (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0;
+
+    // Auto-submit after brief visual feedback
+    setTimeout(() => el.closest('form').submit(), 150);
 }
 </script>

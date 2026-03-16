@@ -160,6 +160,17 @@ def parse_docx(docx_path):
             state = 'CONTEXT'
             continue
 
+        # --- Context continuation (non-question text following a context header) ---
+        if state == 'CONTEXT' and current_context and not re.match(r'^\d+\)', line_stripped):
+            # Append text that's part of the context scenario (not a question)
+            img_match = re.search(r'\[IMAGE:([^\]]+)\]', line_stripped)
+            if img_match:
+                current_context['image'] = img_match.group(1)
+                continue
+            if line_stripped not in ('[TABLE_START]', '[TABLE_END]'):
+                current_context['text'] += ' ' + line_stripped
+            # Fall through to handle TABLE markers below
+
         # --- Image marker ---
         img_match = re.search(r'\[IMAGE:([^\]]+)\]', line_stripped)
         if img_match:
