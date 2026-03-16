@@ -125,6 +125,8 @@ def parse_docx(docx_path):
     current_section = {'number': '', 'title': ''}
     current_context = None
     current_question = None
+    context_is_fresh = False  # True only between a context block and the first Skill: after it
+    context_question_numbers = set()  # Track which question numbers belong to current context
     state = 'IDLE'
     table_lines = []
 
@@ -149,6 +151,8 @@ def parse_docx(docx_path):
                 current_section = {'number': sec_num, 'title': sec_title}
                 if not any(s['number'] == sec_num for s in result['sections']):
                     result['sections'].append(current_section.copy())
+                # Clear context when entering a new section
+                current_context = None
                 state = 'IDLE'
                 continue
 
@@ -157,6 +161,8 @@ def parse_docx(docx_path):
             _save_question(current_question, result)
             current_question = None
             current_context = {'text': line_stripped, 'image': ''}
+            context_is_fresh = True
+            context_question_numbers = set()
             state = 'CONTEXT'
             continue
 
@@ -200,8 +206,13 @@ def parse_docx(docx_path):
         q_match = re.match(r'^(\d+)\)\s+(.*)', line_stripped)
         if q_match:
             _save_question(current_question, result)
+            q_num = int(q_match.group(1))
+            # Only attach context if it's fresh (we haven't seen a non-context question yet)
+            attach_context = current_context if context_is_fresh else None
+            if attach_context:
+                context_question_numbers.add(q_num)
             current_question = {
-                'question_number': int(q_match.group(1)),
+                'question_number': q_num,
                 'text': q_match.group(2),
                 'question_type': None,
                 'choices': [],
@@ -213,7 +224,7 @@ def parse_docx(docx_path):
                 'section_number': current_section.get('number', ''),
                 'section_title': current_section.get('title', ''),
                 'image': '',
-                'context': current_context.copy() if current_context else None,
+                'context': attach_context.copy() if attach_context else None,
             }
             state = 'QUESTION'
             continue

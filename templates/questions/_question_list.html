@@ -17,14 +17,16 @@
   </div>
   <div class="card-body">
 
-    {% if q.context_group %}
+    {% if q.context_group and q.context_group.text|length > 60 %}
     <div class="alert alert-light border mb-3">
       <small class="text-muted d-block mb-1"><strong>Context:</strong></small>
-      <div>{{ q.context_group.text|truncatewords:40 }}</div>
-      {% if q.context_group.image %}
+      <div>{{ q.context_group.text|truncatewords:40|safe }}</div>
+    </div>
+    {% endif %}
+    {% if q.context_group and q.context_group.image %}
+    <div class="mb-3">
       <img src="{{ MEDIA_URL }}{{ q.context_group.image }}"
-           class="img-fluid mt-2" style="max-height:200px;" alt="Context image">
-      {% endif %}
+           class="img-fluid" style="max-height:200px;" alt="Context image">
     </div>
     {% endif %}
 

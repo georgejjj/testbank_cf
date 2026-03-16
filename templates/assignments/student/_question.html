@@ -8,13 +8,15 @@
     </div>
     <div class="card-body">
 
-        {% if question.context_group and question.context_group.text %}
+        {% if question.context_group and question.context_group.text|length > 60 %}
         <div class="alert alert-light border mb-3">
             <small class="text-muted d-block mb-1">Reference Information:</small>
             {{ question.context_group.text|safe }}
-            {% if question.context_group.image %}
-            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid mt-2" style="max-height: 250px;">
-            {% endif %}
+        </div>
+        {% endif %}
+        {% if question.context_group and question.context_group.image %}
+        <div class="mb-3">
+            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid" style="max-height: 250px;">
         </div>
         {% endif %}
 
