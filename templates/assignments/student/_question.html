@@ -1,0 +1,87 @@
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span>Question {{ question_idx|add:1 }} of {{ total_questions }}</span>
+        <span class="badge bg-info">{{ question.get_question_type_display }}</span>
+    </div>
+    <div class="card-body">
+        {% if question.context_group %}
+        <div class="alert alert-light">
+            {{ question.context_group.text|safe }}
+            {% if question.context_group.image %}
+            <img src="{{ MEDIA_URL }}{{ question.context_group.image }}" class="img-fluid mt-2">
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if question.image %}
+        <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid mb-3" style="max-height: 300px;">
+        {% endif %}
+
+        <p class="fs-5">{{ question.text }}</p>
+
+        <form method="post" action="{% url 'submit_answer' sa.pk %}" id="answer-form">
+            {% csrf_token %}
+            <input type="hidden" name="question_id" value="{{ question.id }}">
+            <input type="hidden" name="question_idx" value="{{ question_idx }}">
+            <input type="hidden" name="time_spent" id="time-spent-input" value="0">
+
+            {% if question.question_type == 'MC' %}
+                {% for choice in choices %}
+                <div class="choice-option {% if existing_answer and existing_answer.selected_choice_id == choice.id %}selected{% endif %}"
+                     onclick="selectChoice(this, {{ choice.id }})">
+                    <input type="radio" name="choice_id" value="{{ choice.id }}" class="d-none"
+                           {% if existing_answer and existing_answer.selected_choice_id == choice.id %}checked{% endif %}>
+                    <strong>{{ choice.display_letter }})</strong> {{ choice.text }}
+                </div>
+                {% endfor %}
+            {% elif question.question_type == 'NUMERIC' %}
+                <div class="mb-3">
+                    <label class="form-label">Your answer (numeric value):</label>
+                    <input type="text" name="numeric_answer" class="form-control" style="max-width: 300px;"
+                           placeholder="e.g. $254,641 or -1234.56"
+                           value="{{ existing_answer.numeric_answer|default:'' }}">
+                </div>
+            {% else %}
+                <div class="mb-3">
+                    <label class="form-label">Your answer:</label>
+                    <textarea name="text_answer" class="form-control" rows="5"
+                              maxlength="5000">{{ existing_answer.text_answer|default:'' }}</textarea>
+                    <small class="text-muted">Max 5000 characters</small>
+                </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between mt-3">
+                {% if question_idx > 0 %}
+                <a href="?q={{ question_idx|add:-1 }}" class="btn btn-outline-secondary">Previous</a>
+                {% else %}<span></span>{% endif %}
+
+                <button type="submit" class="btn btn-primary"
+                        onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
+                    Save Answer
+                </button>
+
+                {% if question_idx < total_questions|add:-1 %}
+                <a href="?q={{ question_idx|add:1 }}" class="btn btn-outline-secondary">Next</a>
+                {% else %}<span></span>{% endif %}
+            </div>
+        </form>
+
+        {% if question_idx == total_questions|add:-1 %}
+        <hr>
+        <form method="post" action="{% url 'complete_assignment' sa.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success w-100"
+                    onclick="return confirm('Submit assignment? You cannot change answers after this.')">
+                Submit Assignment
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+<script>
+function selectChoice(el, choiceId) {
+    document.querySelectorAll('.choice-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input[type=radio]').checked = true;
+}
+</script>

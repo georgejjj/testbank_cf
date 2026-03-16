@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student_assignment.assignment.title }} - TestBank{% endblock %}
+
+{% block extra_css %}
+<style>
+  .question-nav-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-weight: 600;
+  }
+  .question-nav-btn.answered {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #fff !important;
+  }
+  .question-nav-btn.current {
+    border: 3px solid #0d6efd !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Left Sidebar -->
+  <div class="col-lg-3 mb-4">
+    <!-- Question Navigation -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header">
+        <h6 class="mb-0">Questions</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% for q_item in question_nav %}
+          <a href="{% url 'take_assignment' student_assignment.pk %}?q={{ q_item.position }}"
+             class="btn btn-outline-secondary question-nav-btn
+                    {% if q_item.answered %}answered{% endif %}
+                    {% if q_item.position == current_position %}current{% endif %}">
+            {{ q_item.position }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Timer -->
+    {% if student_assignment.assignment.time_limit_minutes %}
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-clock"></i> Time Remaining</h6>
+      </div>
+      <div class="card-body text-center">
+        <h3 id="timer" class="mb-0 font-monospace">--:--</h3>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Main Question Area -->
+  <div class="col-lg-9">
+    <div id="question-area">
+      {% include "assignments/student/_question.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if student_assignment.assignment.time_limit_minutes %}
+<script>
+  (function() {
+    const timeLimit = {{ student_assignment.assignment.time_limit_minutes }};
+    const startedAt = new Date("{{ student_assignment.started_at|date:'c' }}");
+    const endTime = new Date(startedAt.getTime() + timeLimit * 60 * 1000);
+    const timerEl = document.getElementById('timer');
+    const saPk = {{ student_assignment.pk }};
+
+    function updateTimer() {
+      const now = new Date();
+      let diff = Math.max(0, Math.floor((endTime - now) / 1000));
+
+      if (diff <= 0) {
+        timerEl.textContent = '00:00';
+        timerEl.classList.add('text-danger');
+        // Auto-submit when time is up
+        window.location.href = "{% url 'complete_assignment' student_assignment.pk %}";
+        return;
+      }
+
+      const hours = Math.floor(diff / 3600);
+      diff %= 3600;
+      const minutes = Math.floor(diff / 60);
+      const seconds = diff % 60;
+
+      if (hours > 0) {
+        timerEl.textContent =
+          String(hours).padStart(2, '0') + ':' +
+          String(minutes).padStart(2, '0') + ':' +
+          String(seconds).padStart(2, '0');
+      } else {
+        timerEl.textContent =
+          String(minutes).padStart(2, '0') + ':' +
+          String(seconds).padStart(2, '0');
+      }
+
+      // Warn when less than 2 minutes
+      if (diff < 120) {
+        timerEl.classList.add('text-danger');
+      }
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  })();
+</script>
+{% endif %}
+{% endblock %}

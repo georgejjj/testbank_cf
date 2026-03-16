@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Instructor Dashboard - TestBank{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Instructor Dashboard</h2>
+
+<!-- Stats Row -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-bg-primary shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Total Assignments</h6>
+        <h2 class="mb-0">{{ total_assignments }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-success shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Published</h6>
+        <h2 class="mb-0">{{ published_count }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-info shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Total Students</h6>
+        <h2 class="mb-0">{{ total_students }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-warning shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Questions in Bank</h6>
+        <h2 class="mb-0">{{ total_questions }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assignment Table -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Assignments</h5>
+    <a href="{% url 'assignment_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Create Assignment
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Title</th>
+            <th>Mode</th>
+            <th>Questions</th>
+            <th>Status</th>
+            <th>Completed</th>
+            <th>Avg Score</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in assignments %}
+          <tr>
+            <td>
+              <a href="{% url 'assignment_detail' a.pk %}">{{ a.title }}</a>
+            </td>
+            <td>
+              <span class="badge bg-{% if a.mode == 'ASSIGNMENT' %}primary{% else %}secondary{% endif %}">
+                {{ a.get_mode_display }}
+              </span>
+            </td>
+            <td>{{ a.num_questions }}</td>
+            <td>
+              {% if a.is_published %}
+              <span class="badge bg-success">Published</span>
+              {% else %}
+              <span class="badge bg-secondary">Draft</span>
+              {% endif %}
+            </td>
+            <td>{{ a.completed_count }}</td>
+            <td>
+              {% if a.avg_score is not None %}
+                {{ a.avg_score|floatformat:1 }}%
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <form method="post" action="{% url 'assignment_publish' a.pk %}" class="d-inline">
+                {% csrf_token %}
+                {% if a.is_published %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Unpublish">
+                  <i class="bi bi-eye-slash"></i> Unpublish
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Publish">
+                  <i class="bi bi-eye"></i> Publish
+                </button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+              No assignments yet. Create one to get started.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Grade Free Response Link -->
+{% if ungraded_count > 0 %}
+<div class="alert alert-warning">
+  <i class="bi bi-pencil-square"></i>
+  You have <strong>{{ ungraded_count }}</strong> ungraded free-response answer{{ ungraded_count|pluralize }}.
+  <a href="{% url 'grade_free_response' %}" class="alert-link">Grade now</a>
+</div>
+{% endif %}
+
+<div class="row">
+  <!-- Score Distribution Chart -->
+  <div class="col-lg-6 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0">Score Distribution</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="scoreDistChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Summary Table -->
+  <div class="col-lg-6 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0">Student Summary</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Student</th>
+                <th>Completed</th>
+                <th>Avg Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in student_summary %}
+              <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.completed }}</td>
+                <td>
+                  {% if s.avg_score is not None %}
+                    {{ s.avg_score|floatformat:1 }}%
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted py-3">No data yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const scoreData = {{ score_distribution|safe }};
+  new Chart(document.getElementById('scoreDistChart'), {
+    type: 'bar',
+    data: {
+      labels: scoreData.labels,
+      datasets: [{
+        label: 'Number of Students',
+        data: scoreData.counts,
+        backgroundColor: 'rgba(13, 110, 253, 0.7)',
+        borderColor: 'rgba(13, 110, 253, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+</script>
+{% endblock %}

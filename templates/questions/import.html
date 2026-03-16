@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Import Questions - TestBank{% endblock %}
+{% block nav_questions %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow">
+      <div class="card-header">
+        <h4 class="mb-0"><i class="bi bi-file-earmark-word"></i> Import Questions</h4>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-muted">
+          Upload a <code>.docx</code> file containing test bank questions.
+          The importer will parse the document and add questions to the database.
+        </p>
+
+        {% if form.errors %}
+        <div class="alert alert-danger">
+          {% for field in form %}
+            {% for error in field.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'question_import' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label for="docx_file" class="form-label">Word Document (.docx)</label>
+            <input type="file" name="docx_file" id="docx_file"
+                   class="form-control" accept=".docx" required>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-upload"></i> Import Questions
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

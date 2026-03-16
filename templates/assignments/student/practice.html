@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Practice Mode{% endblock %}
+{% block content %}
+<h2>Practice Mode</h2>
+<p>Select chapters and settings, then start practicing.</p>
+<form method="post">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Chapters</h5>
+            {% for ch in chapters %}
+            <div class="form-check">
+                <input type="checkbox" name="chapters" value="{{ ch.id }}" class="form-check-input" id="pch{{ ch.id }}">
+                <label class="form-check-label" for="pch{{ ch.id }}">Ch {{ ch.number }}: {{ ch.title }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-md-6">
+            <h5>Difficulty</h5>
+            <div class="form-check form-check-inline">
+                <input type="checkbox" name="difficulty" value="1" class="form-check-input" checked> <label class="form-check-label">Easy</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input type="checkbox" name="difficulty" value="2" class="form-check-input" checked> <label class="form-check-label">Medium</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input type="checkbox" name="difficulty" value="3" class="form-check-input"> <label class="form-check-label">Hard</label>
+            </div>
+            <div class="mt-3">
+                <label class="form-label">Number of questions</label>
+                <input type="number" name="num_questions" class="form-control" value="10" min="1" max="50" style="max-width: 120px;">
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Start Practice</button>
+</form>
+{% endblock %}

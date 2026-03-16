@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Student Roster - TestBank{% endblock %}
+{% block nav_students %}active{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Student Roster</h2>
+
+<div class="row">
+  <!-- Student Table -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Students ({{ students|length }})</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Student ID</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in students %}
+              <tr>
+                <td>{{ student.get_full_name|default:student.username }}</td>
+                <td><code>{{ student.username }}</code></td>
+                <td>{{ student.student_id }}</td>
+                <td class="text-end">
+                  <form method="post" action="{% url 'student_roster' %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reset_password">
+                    <input type="hidden" name="student_id" value="{{ student.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-warning"
+                            title="Reset Password"
+                            onclick="return confirm('Reset password for {{ student.username }}?')">
+                      <i class="bi bi-key"></i> Reset PW
+                    </button>
+                  </form>
+                  <form method="post" action="{% url 'student_roster' %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="student_id" value="{{ student.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            title="Remove Student"
+                            onclick="return confirm('Remove {{ student.username }} from the roster?')">
+                      <i class="bi bi-trash"></i> Remove
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  No students yet. Import a CSV to get started.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Import -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0">Import Students</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">
+          Upload a CSV file with columns:
+          <code>first_name, last_name, username, student_id</code>
+        </p>
+        <form method="post" action="{% url 'student_roster' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="import_csv">
+
+          <div class="mb-3">
+            <label for="csv_file" class="form-label">CSV File</label>
+            <input type="file" name="csv_file" id="csv_file"
+                   class="form-control" accept=".csv" required>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-upload"></i> Import CSV
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

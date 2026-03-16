@@ -1,0 +1,13 @@
+.question-card { margin-bottom: 1rem; }
+.choice-option { padding: 0.5rem 1rem; margin: 0.25rem 0; border-radius: 0.375rem; cursor: pointer; border: 1px solid #dee2e6; }
+.choice-option:hover { background-color: #f0f0f0; }
+.choice-option.selected { background-color: #cfe2ff; border: 1px solid #084298; }
+.choice-option.correct { background-color: #d1e7dd; }
+.choice-option.incorrect { background-color: #f8d7da; }
+.timer-display { font-size: 1.1rem; font-weight: bold; }
+.question-nav .btn { min-width: 2.5rem; }
+.question-nav .btn.answered { background-color: #198754; color: white; }
+.question-nav .btn.current { border: 2px solid #0d6efd; }
+@media (max-width: 768px) {
+    .choice-option { padding: 0.75rem 1rem; font-size: 1.1rem; }
+}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Grade Free Response - TestBank{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Grade Free Response</h2>
+  <span class="badge bg-warning text-dark fs-6">{{ ungraded_answers|length }} remaining</span>
+</div>
+
+{% if not ungraded_answers %}
+<div class="alert alert-success">
+  <i class="bi bi-check-circle-fill"></i>
+  All free-response answers have been graded. Great work!
+</div>
+{% else %}
+
+{% for answer in ungraded_answers %}
+<div class="card shadow-sm mb-4" id="answer-{{ answer.pk }}">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ answer.student_assignment.student.get_full_name|default:answer.student_assignment.student.username }}</strong>
+      <span class="text-muted mx-2">|</span>
+      {{ answer.student_assignment.assignment.title }}
+      <span class="text-muted mx-2">|</span>
+      Q{{ answer.question.question_number }}
+    </div>
+    <span class="badge bg-info text-dark">{{ answer.question.get_question_type_display }}</span>
+  </div>
+  <div class="card-body">
+
+    <!-- Question Text -->
+    <div class="mb-3">
+      <h6 class="text-muted">Question:</h6>
+      <p>{{ answer.question.text }}</p>
+    </div>
+
+    <!-- Student Answer -->
+    <div class="mb-3">
+      <h6 class="text-muted">Student's Answer:</h6>
+      <div class="bg-light p-3 rounded border">
+        {{ answer.text_answer|linebreaksbr }}
+      </div>
+    </div>
+
+    <!-- Expected Answer -->
+    {% if answer.question.answer_raw_text %}
+    <div class="mb-3">
+      <h6 class="text-muted">Expected Answer:</h6>
+      <div class="bg-light p-3 rounded border">
+        {{ answer.question.answer_raw_text|linebreaksbr }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Grading Form -->
+    <form method="post" action="{% url 'grade_free_response' %}">
+      {% csrf_token %}
+      <input type="hidden" name="answer_id" value="{{ answer.pk }}">
+
+      <div class="mb-3">
+        <label for="feedback_{{ answer.pk }}" class="form-label fw-semibold">Feedback</label>
+        <textarea name="feedback" id="feedback_{{ answer.pk }}"
+                  class="form-control" rows="3"
+                  placeholder="Optional feedback for the student..."></textarea>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" name="grade" value="correct"
+                class="btn btn-success">
+          <i class="bi bi-check-lg"></i> Correct
+        </button>
+        <button type="submit" name="grade" value="incorrect"
+                class="btn btn-danger">
+          <i class="bi bi-x-lg"></i> Incorrect
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

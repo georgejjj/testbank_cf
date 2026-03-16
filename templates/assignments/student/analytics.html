@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}My Analytics{% endblock %}
+{% block content %}
+<h2>My Analytics</h2>
+<div class="row mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ total_answered }}</h3><p class="text-muted">Answered</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ total_correct }}</h3><p class="text-muted">Correct</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{% if total_answered > 0 %}{% widthratio total_correct total_answered 100 %}%{% else %}0%{% endif %}</h3><p class="text-muted">Accuracy</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ avg_time }}s</h3><p class="text-muted">Avg Time</p></div></div></div>
+</div>
+<div class="row">
+    <div class="col-md-6"><canvas id="chapterChart"></canvas></div>
+    <div class="col-md-6"><canvas id="diffChart"></canvas></div>
+</div>
+<div class="row mt-4">
+    <div class="col-md-6"><canvas id="skillChart"></canvas></div>
+    <div class="col-md-6"><canvas id="progressChart"></canvas></div>
+</div>
+{% if weakest %}
+<h4 class="mt-4">Weakest Areas</h4>
+<ul class="list-group">
+    {% for name, pct in weakest %}
+    <li class="list-group-item d-flex justify-content-between">{{ name }} <span class="badge bg-danger">{{ pct|floatformat:0 }}%</span></li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+function barChart(id, labels, data, color) {
+    new Chart(document.getElementById(id), {
+        type: 'bar', data: { labels: labels, datasets: [{label: 'Accuracy %', data: data, backgroundColor: color}] },
+        options: { scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+    });
+}
+function lineChart(id, labels, data) {
+    new Chart(document.getElementById(id), {
+        type: 'line', data: { labels: labels, datasets: [{label: 'Score %', data: data, borderColor: '#0d6efd', fill: false, tension: 0.3}] },
+        options: { scales: { y: { beginAtZero: true, max: 100 } } }
+    });
+}
+barChart('chapterChart', {{ chapter_labels|safe }}, {{ chapter_accuracy|safe }}, '#0d6efd');
+barChart('diffChart', {{ diff_labels|safe }}, {{ diff_accuracy|safe }}, '#198754');
+barChart('skillChart', {{ skill_labels|safe }}, {{ skill_accuracy|safe }}, '#6f42c1');
+lineChart('progressChart', {{ progress_labels|safe }}, {{ progress_scores|safe }});
+</script>
+{% endblock %}

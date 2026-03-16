@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TestBank{% endblock %}</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+
+  <!-- MathJax -->
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$','$']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="/">TestBank</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#mainNav" aria-controls="mainNav"
+              aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="mainNav">
+        {% if user.is_authenticated %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+          {% if user.is_instructor %}
+          <li class="nav-item">
+            <a class="nav-link {% block nav_dashboard %}{% endblock %}"
+               href="{% url 'instructor_dashboard' %}">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_create %}{% endblock %}"
+               href="{% url 'assignment_create' %}">Create Assignment</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_questions %}{% endblock %}"
+               href="{% url 'question_browser' %}">Questions</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_students %}{% endblock %}"
+               href="{% url 'student_roster' %}">Students</a>
+          </li>
+          {% endif %}
+
+          {% if user.is_student %}
+          <li class="nav-item">
+            <a class="nav-link {% block nav_sdashboard %}{% endblock %}"
+               href="{% url 'student_dashboard' %}">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_assignments %}{% endblock %}"
+               href="{% url 'assignment_list' %}">Assignments</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_practice %}{% endblock %}"
+               href="{% url 'practice_setup' %}">Practice</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_mistakes %}{% endblock %}"
+               href="{% url 'mistake_collection' %}">Mistakes</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% block nav_analytics %}{% endblock %}"
+               href="{% url 'student_analytics' %}">Analytics</a>
+          </li>
+          {% endif %}
+
+        </ul>
+
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url 'password_change' %}">Change Password</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+            </ul>
+          </li>
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Error Toast -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1090;">
+    <div id="errorToast" class="toast text-bg-danger" role="alert"
+         aria-live="assertive" aria-atomic="true">
+      <div class="toast-header text-bg-danger">
+        <strong class="me-auto">Error</strong>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body" id="errorToastBody"></div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+  <div class="container-fluid mt-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Main Content -->
+  <main class="container-fluid py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- HTMX CSRF setup -->
+  <script>
+    document.body.addEventListener('htmx:configRequest', function(evt) {
+      var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+      if (!csrfToken) {
+        csrfToken = '{{ csrf_token }}';
+      } else {
+        csrfToken = csrfToken.value;
+      }
+      evt.detail.headers['X-CSRFToken'] = csrfToken;
+    });
+
+    // Show error toast on HTMX errors
+    document.body.addEventListener('htmx:responseError', function(evt) {
+      var toastBody = document.getElementById('errorToastBody');
+      toastBody.textContent = 'An error occurred: ' + evt.detail.xhr.status;
+      var toast = new bootstrap.Toast(document.getElementById('errorToast'));
+      toast.show();
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

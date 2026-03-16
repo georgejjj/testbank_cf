@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Mistake Collection{% endblock %}
+{% block content %}
+<h2>Mistake Collection ({{ mistakes.count }})</h2>
+<div class="d-flex justify-content-between mb-3">
+    <select class="form-select form-select-sm" style="width: auto;" onchange="window.location='?chapter='+this.value">
+        <option value="">All Chapters</option>
+        {% for ch in chapters %}
+        <option value="{{ ch.id }}" {% if selected_chapter == ch.id|stringformat:"d" %}selected{% endif %}>Ch {{ ch.number }}: {{ ch.title }}</option>
+        {% endfor %}
+    </select>
+    {% if mistakes.count > 0 %}
+    <form method="post" action="{% url 'practice_mistakes' %}">{% csrf_token %}
+        <button class="btn btn-primary btn-sm">Re-Practice All</button>
+    </form>
+    {% endif %}
+</div>
+{% for me in mistakes %}
+<div class="card mb-2">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <span>
+                <span class="badge bg-secondary">Ch {{ me.question.section.chapter.number }}</span>
+                Q{{ me.question.question_number }}
+                <span class="badge bg-warning text-dark">Diff {{ me.question.difficulty }}</span>
+            </span>
+            <span>
+                {% if me.times_practiced > 0 %}<small class="text-muted">Practiced {{ me.times_practiced }}x</small>{% endif %}
+                <form method="post" action="{% url 'mark_mastered' me.pk %}" class="d-inline">{% csrf_token %}
+                    <button class="btn btn-sm btn-outline-success">Mark Mastered</button>
+                </form>
+            </span>
+        </div>
+        <p class="mt-2 mb-0">{{ me.question.text|truncatechars:200 }}</p>
+    </div>
+</div>
+{% empty %}
+<p class="text-muted">No mistakes to review. Great job!</p>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Create Assignment - TestBank{% endblock %}
+{% block nav_create %}active{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Create Assignment</h2>
+
+{% if form.errors %}
+<div class="alert alert-danger">
+  {% for field in form %}
+    {% for error in field.errors %}
+      <div>{{ error }}</div>
+    {% endfor %}
+  {% endfor %}
+  {% for error in form.non_field_errors %}
+    <div>{{ error }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'assignment_create' %}">
+  {% csrf_token %}
+
+  <div class="row">
+    <!-- Left Column: Main Fields -->
+    <div class="col-lg-7">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Assignment Details</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="id_title" class="form-label">Title</label>
+            <input type="text" name="title" id="id_title" class="form-control"
+                   value="{{ form.title.value|default:'' }}" required>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_mode" class="form-label">Mode</label>
+              <select name="mode" id="id_mode" class="form-select" required>
+                <option value="ASSIGNMENT" {% if form.mode.value == "ASSIGNMENT" %}selected{% endif %}>Assignment</option>
+                <option value="PRACTICE" {% if form.mode.value == "PRACTICE" %}selected{% endif %}>Practice</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_num_questions" class="form-label">Number of Questions</label>
+              <input type="number" name="num_questions" id="id_num_questions"
+                     class="form-control" min="1"
+                     value="{{ form.num_questions.value|default:'10' }}" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <div class="form-check mt-4">
+                <input type="checkbox" name="is_randomized" id="id_is_randomized"
+                       class="form-check-input"
+                       {% if form.is_randomized.value != False %}checked{% endif %}>
+                <label class="form-check-label" for="id_is_randomized">
+                  Randomize question order per student
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_due_date" class="form-label">Due Date</label>
+              <input type="datetime-local" name="due_date" id="id_due_date"
+                     class="form-control"
+                     value="{{ form.due_date.value|default:'' }}">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_time_limit_minutes" class="form-label">
+              Time Limit (minutes) <small class="text-muted">- optional</small>
+            </label>
+            <input type="number" name="time_limit_minutes" id="id_time_limit_minutes"
+                   class="form-control" min="1"
+                   value="{{ form.time_limit_minutes.value|default:'' }}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Filters -->
+    <div class="col-lg-5">
+      <!-- Chapters -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Chapters</h5>
+        </div>
+        <div class="card-body" style="max-height:250px; overflow-y:auto;">
+          {% for chapter in chapters %}
+          <div class="form-check">
+            <input type="checkbox" name="chapters" id="ch_{{ chapter.pk }}"
+                   value="{{ chapter.pk }}" class="form-check-input"
+                   {% if chapter.pk in selected_chapters %}checked{% endif %}>
+            <label class="form-check-label" for="ch_{{ chapter.pk }}">
+              Ch {{ chapter.number }}: {{ chapter.title }}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Difficulty</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check">
+            <input type="checkbox" name="difficulty_filter" id="diff_1"
+                   value="1" class="form-check-input"
+                   {% if 1 in selected_difficulties %}checked{% endif %}>
+            <label class="form-check-label" for="diff_1">
+              <span class="badge bg-success">1</span> Easy
+            </label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" name="difficulty_filter" id="diff_2"
+                   value="2" class="form-check-input"
+                   {% if 2 in selected_difficulties %}checked{% endif %}>
+            <label class="form-check-label" for="diff_2">
+              <span class="badge bg-warning text-dark">2</span> Medium
+            </label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" name="difficulty_filter" id="diff_3"
+                   value="3" class="form-check-input"
+                   {% if 3 in selected_difficulties %}checked{% endif %}>
+            <label class="form-check-label" for="diff_3">
+              <span class="badge bg-danger">3</span> Hard
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Skills</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check">
+            <input type="checkbox" name="skill_filter" id="skill_conceptual"
+                   value="Conceptual" class="form-check-input"
+                   {% if "Conceptual" in selected_skills %}checked{% endif %}>
+            <label class="form-check-label" for="skill_conceptual">Conceptual</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" name="skill_filter" id="skill_definition"
+                   value="Definition" class="form-check-input"
+                   {% if "Definition" in selected_skills %}checked{% endif %}>
+            <label class="form-check-label" for="skill_definition">Definition</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" name="skill_filter" id="skill_analytical"
+                   value="Analytical" class="form-check-input"
+                   {% if "Analytical" in selected_skills %}checked{% endif %}>
+            <label class="form-check-label" for="skill_analytical">Analytical</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end mb-4">
+    <button type="submit" class="btn btn-primary btn-lg">
+      <i class="bi bi-plus-circle"></i> Create Assignment
+    </button>
+  </div>
+</form>
+{% endblock %}

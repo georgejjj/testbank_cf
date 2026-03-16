@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard - TestBank{% endblock %}
+{% block nav_sdashboard %}active{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Welcome, {{ user.first_name|default:user.username }}!</h2>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card text-bg-primary shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Completed Assignments</h6>
+        <h2 class="mb-0">{{ completed_count }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-success shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Average Score</h6>
+        <h2 class="mb-0">
+          {% if avg_score is not None %}{{ avg_score|floatformat:1 }}%{% else %}&mdash;{% endif %}
+        </h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-warning shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title">Mistakes to Review</h6>
+        <h2 class="mb-0">{{ mistakes_count }}</h2>
+        {% if mistakes_count > 0 %}
+        <a href="{% url 'mistake_collection' %}" class="text-dark small">Review now</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Active Assignments -->
+  <div class="col-lg-7 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0">Active Assignments</h5>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for sa in active_assignments %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-1">{{ sa.assignment.title }}</h6>
+            <small class="text-muted">
+              {% if sa.assignment.due_date %}
+                Due: {{ sa.assignment.due_date|date:"M d, Y g:i A" }}
+              {% else %}
+                No due date
+              {% endif %}
+            </small>
+          </div>
+          <div>
+            {% if sa.status == "NOT_STARTED" %}
+            <a href="{% url 'take_assignment' sa.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-play-fill"></i> Start
+            </a>
+            {% elif sa.status == "IN_PROGRESS" %}
+            <a href="{% url 'take_assignment' sa.pk %}" class="btn btn-warning btn-sm">
+              <i class="bi bi-pencil-fill"></i> Continue
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="list-group-item text-center text-muted py-4">
+          No active assignments right now.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Results -->
+  <div class="col-lg-5 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0">Recent Results</h5>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for sa in recent_results %}
+        <a href="{% url 'assignment_result' sa.pk %}"
+           class="list-group-item list-group-item-action">
+          <div class="d-flex justify-content-between">
+            <h6 class="mb-1">{{ sa.assignment.title }}</h6>
+            <span class="badge bg-{% if sa.score_percent >= 70 %}success{% elif sa.score_percent >= 50 %}warning text-dark{% else %}danger{% endif %}">
+              {{ sa.score_percent|floatformat:0 }}%
+            </span>
+          </div>
+          <small class="text-muted">
+            {{ sa.completed_at|date:"M d, Y" }} &middot;
+            {{ sa.score }}/{{ sa.max_score }}
+          </small>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center text-muted py-4">
+          No results yet. Complete an assignment to see your scores.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
