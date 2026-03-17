@@ -90,6 +90,7 @@ def assignment_create(request):
 
         difficulty_filter = [int(d) for d in request.POST.getlist('difficulty_checks')]
         skill_filter = request.POST.getlist('skill_checks')
+        type_filter = request.POST.getlist('type_checks')
 
         assignment = Assignment.objects.create(
             title=title,
@@ -100,6 +101,7 @@ def assignment_create(request):
             due_date=due_date,
             difficulty_filter=difficulty_filter,
             skill_filter=skill_filter,
+            type_filter=type_filter,
         )
 
         chapter_ids = request.POST.getlist('chapters')
@@ -116,7 +118,11 @@ def assignment_create(request):
         return redirect('instructor_dashboard')
 
     chapters = Chapter.objects.prefetch_related('sections')
-    return render(request, 'assignments/instructor/create.html', {'chapters': chapters})
+    all_questions = Question.objects.select_related('section__chapter').order_by('section__chapter__number', 'question_number')[:500]
+    return render(request, 'assignments/instructor/create.html', {
+        'chapters': chapters,
+        'all_questions': all_questions,
+    })
 
 
 @login_required

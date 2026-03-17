@@ -5,9 +5,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Chapter, Section, Question
+from .models import Chapter, Section, Question, MCChoice, NumericAnswer
 
 
 @login_required
@@ -19,6 +19,7 @@ def question_browser(request):
     selected_chapter = request.GET.get('chapter')
     selected_difficulty = request.GET.get('difficulty')
     selected_skill = request.GET.get('skill')
+    selected_type = request.GET.get('qtype')
     search = request.GET.get('q', '')
 
     questions = Question.objects.select_related(
@@ -31,6 +32,8 @@ def question_browser(request):
         questions = questions.filter(difficulty=selected_difficulty)
     if selected_skill:
         questions = questions.filter(skill=selected_skill)
+    if selected_type:
+        questions = questions.filter(question_type=selected_type)
     if search:
         questions = questions.filter(text__icontains=search)
 
@@ -46,6 +49,7 @@ def question_browser(request):
             'chapter': selected_chapter,
             'difficulty': selected_difficulty,
             'skill': selected_skill,
+            'qtype': selected_type,
             'q': search,
         },
     })
@@ -78,6 +82,65 @@ def question_import(request):
         return redirect('question_browser')
 
     return render(request, 'questions/import.html')
+
+
+@login_required
+def question_edit(request, pk):
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    question = get_object_or_404(Question, pk=pk)
+
+    if request.method == 'POST':
+        question.text = request.POST.get('text', question.text)
+        question.question_type = request.POST.get('question_type', question.question_type)
+        question.difficulty = int(request.POST.get('difficulty', question.difficulty))
+        question.skill = request.POST.get('skill', question.skill)
+        question.explanation = request.POST.get('explanation', '')
+        question.answer_raw_text = request.POST.get('answer_raw_text', '')
+        question.save()
+
+        # Update MC choices
+        if question.question_type == 'MC':
+            correct_letter = request.POST.get('correct_choice', '')
+            letters = request.POST.getlist('choice_letter')
+            texts = request.POST.getlist('choice_text')
+            question.choices.all().delete()
+            for letter, text in zip(letters, texts):
+                if letter and text:
+                    MCChoice.objects.create(
+                        question=question,
+                        letter=letter,
+                        text=text,
+                        is_correct=(letter == correct_letter),
+                    )
+
+        # Update numeric answer
+        elif question.question_type == 'NUMERIC':
+            numeric_val = request.POST.get('numeric_value', '')
+            if numeric_val:
+                from decimal import Decimal
+                NumericAnswer.objects.update_or_create(
+                    question=question,
+                    defaults={'value': Decimal(numeric_val)},
+                )
+
+        messages.success(request, f'Question {question.question_number} updated.')
+        return redirect('question_browser')
+
+    choices = list(question.choices.all()) if question.question_type == 'MC' else []
+    numeric_answer = None
+    if question.question_type == 'NUMERIC':
+        try:
+            numeric_answer = question.numeric_answer
+        except NumericAnswer.DoesNotExist:
+            pass
+
+    return render(request, 'questions/edit.html', {
+        'question': question,
+        'choices': choices,
+        'numeric_answer': numeric_answer,
+    })
 
 
 @login_required

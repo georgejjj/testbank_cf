@@ -17,9 +17,6 @@ urlpatterns = [
     path('take/<int:sa_pk>/complete/', views.complete_assignment, name='complete_assignment'),
     path('result/<int:sa_pk>/', views.assignment_result, name='assignment_result'),
 
-    # Practice
-    path('practice/', views.practice_setup, name='practice_setup'),
-
     # Mistakes
     path('mistakes/', views.mistake_collection, name='mistake_collection'),
     path('mistakes/<int:pk>/mastered/', views.mark_mastered, name='mark_mastered'),

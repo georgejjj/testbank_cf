@@ -1,175 +1,202 @@
 {% extends "base.html" %}
-
 {% block title %}Create Assignment - TestBank{% endblock %}
-{% block nav_create %}active{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Create Assignment</h2>
-
-{% if form.errors %}
-<div class="alert alert-danger">
-  {% for field in form %}
-    {% for error in field.errors %}
-      <div>{{ error }}</div>
-    {% endfor %}
-  {% endfor %}
-  {% for error in form.non_field_errors %}
-    <div>{{ error }}</div>
-  {% endfor %}
+<div class="page-header">
+    <h2>Create Assignment</h2>
+    <p class="page-subtitle">Set up a new assignment or practice set for your students</p>
 </div>
-{% endif %}
 
-<form method="post" action="{% url 'assignment_create' %}">
-  {% csrf_token %}
+<form method="post" id="create-form">
+    {% csrf_token %}
+    <div class="row g-4">
+        <!-- Left: Details -->
+        <div class="col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-gear me-2"></i>Assignment Details</div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" required placeholder="e.g. Homework 1 - Time Value of Money">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Mode</label>
+                            <select name="mode" class="form-select">
+                                <option value="ASSIGNMENT">Assignment (graded)</option>
+                                <option value="PRACTICE">Practice (ungraded)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Due Date</label>
+                            <input type="datetime-local" name="due_date" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" name="is_randomized" class="form-check-input" checked id="randCheck">
+                                <label class="form-check-label" for="randCheck">Randomize order</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-  <div class="row">
-    <!-- Left Column: Main Fields -->
-    <div class="col-lg-7">
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">Assignment Details</h5>
+            <!-- Method Tabs: Auto-Generate vs Hand-Pick -->
+            <div class="card">
+                <div class="card-header p-0">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#auto-tab" type="button"
+                                    style="border-radius: var(--radius-md) var(--radius-md) 0 0;">
+                                <i class="bi bi-shuffle me-1"></i>Auto-Generate
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#handpick-tab" type="button"
+                                    style="border-radius: var(--radius-md) var(--radius-md) 0 0;">
+                                <i class="bi bi-hand-index me-1"></i>Hand-Pick
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body p-4">
+                    <div class="tab-content">
+                        <!-- Auto-Generate Tab -->
+                        <div class="tab-pane fade show active" id="auto-tab">
+                            <p class="text-muted small mb-3">System will randomly draw questions matching your filters below.</p>
+                            <div class="mb-3">
+                                <label class="form-label">Number of Questions</label>
+                                <input type="number" name="num_questions" class="form-control" value="10" min="1" style="max-width: 150px;">
+                            </div>
+                        </div>
+
+                        <!-- Hand-Pick Tab -->
+                        <div class="tab-pane fade" id="handpick-tab">
+                            <p class="text-muted small mb-3">Search and select individual questions. Use the filters on the right to narrow down.</p>
+
+                            <input type="text" class="form-control mb-3" placeholder="Search questions..."
+                                   id="handpick-search" onkeyup="filterHandpickQuestions()">
+
+                            <div id="handpick-list" style="max-height: 400px; overflow-y: auto;">
+                                {% for q in all_questions %}
+                                <div class="form-check handpick-item py-1 border-bottom"
+                                     data-chapter="{{ q.section.chapter_id }}"
+                                     data-difficulty="{{ q.difficulty }}"
+                                     data-skill="{{ q.skill }}"
+                                     data-type="{{ q.question_type }}"
+                                     data-text="{{ q.text|lower }}">
+                                    <input type="checkbox" name="manual_questions" value="{{ q.id }}"
+                                           class="form-check-input manual-q-check" id="mq{{ q.id }}">
+                                    <label class="form-check-label" for="mq{{ q.id }}" style="font-size: 0.88rem;">
+                                        <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
+                                        <span class="badge badge-difficulty-{{ q.difficulty }} me-1">D{{ q.difficulty }}</span>
+                                        <strong>Q{{ q.question_number }}</strong> ({{ q.section.number }})
+                                        — {{ q.text|truncatechars:80 }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                <span id="handpick-count">0</span> questions selected
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label for="id_title" class="form-label">Title</label>
-            <input type="text" name="title" id="id_title" class="form-control"
-                   value="{{ form.title.value|default:'' }}" required>
-          </div>
 
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="id_mode" class="form-label">Mode</label>
-              <select name="mode" id="id_mode" class="form-select" required>
-                <option value="ASSIGNMENT" {% if form.mode.value == "ASSIGNMENT" %}selected{% endif %}>Assignment</option>
-                <option value="PRACTICE" {% if form.mode.value == "PRACTICE" %}selected{% endif %}>Practice</option>
-              </select>
+        <!-- Right: Filters -->
+        <div class="col-lg-5">
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-funnel me-2"></i>Chapters</div>
+                <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                    {% for chapter in chapters %}
+                    <div class="form-check">
+                        <input type="checkbox" name="chapters" value="{{ chapter.pk }}" class="form-check-input" id="ch{{ chapter.pk }}">
+                        <label class="form-check-label" for="ch{{ chapter.pk }}">Ch {{ chapter.number }}: {{ chapter.title }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="col-md-6 mb-3">
-              <label for="id_num_questions" class="form-label">Number of Questions</label>
-              <input type="number" name="num_questions" id="id_num_questions"
-                     class="form-control" min="1"
-                     value="{{ form.num_questions.value|default:'10' }}" required>
-            </div>
-          </div>
 
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <div class="form-check mt-4">
-                <input type="checkbox" name="is_randomized" id="id_is_randomized"
-                       class="form-check-input"
-                       {% if form.is_randomized.value != False %}checked{% endif %}>
-                <label class="form-check-label" for="id_is_randomized">
-                  Randomize question order per student
-                </label>
-              </div>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="id_due_date" class="form-label">Due Date</label>
-              <input type="datetime-local" name="due_date" id="id_due_date"
-                     class="form-control"
-                     value="{{ form.due_date.value|default:'' }}">
-            </div>
-          </div>
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-sliders me-2"></i>Filters</div>
+                <div class="card-body">
+                    <label class="form-label">Difficulty</label>
+                    <div class="mb-3">
+                        {% for val, label in "1:Easy,2:Medium,3:Hard" %}
+                        <!-- handled below -->
+                        {% endfor %}
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="difficulty_checks" value="1" class="form-check-input" id="dc1">
+                            <label class="form-check-label" for="dc1"><span class="badge badge-difficulty-1">Easy</span></label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="difficulty_checks" value="2" class="form-check-input" id="dc2">
+                            <label class="form-check-label" for="dc2"><span class="badge badge-difficulty-2">Medium</span></label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="difficulty_checks" value="3" class="form-check-input" id="dc3">
+                            <label class="form-check-label" for="dc3"><span class="badge badge-difficulty-3">Hard</span></label>
+                        </div>
+                    </div>
 
-          <div class="mb-3">
-            <label for="id_time_limit_minutes" class="form-label">
-              Time Limit (minutes) <small class="text-muted">- optional</small>
-            </label>
-            <input type="number" name="time_limit_minutes" id="id_time_limit_minutes"
-                   class="form-control" min="1"
-                   value="{{ form.time_limit_minutes.value|default:'' }}">
-          </div>
+                    <label class="form-label">Skill</label>
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="skill_checks" value="Conceptual" class="form-check-input" id="sc1">
+                            <label class="form-check-label" for="sc1">Conceptual</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="skill_checks" value="Definition" class="form-check-input" id="sc2">
+                            <label class="form-check-label" for="sc2">Definition</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="skill_checks" value="Analytical" class="form-check-input" id="sc3">
+                            <label class="form-check-label" for="sc3">Analytical</label>
+                        </div>
+                    </div>
+
+                    <label class="form-label">Question Type</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="type_checks" value="MC" class="form-check-input" id="tc1">
+                            <label class="form-check-label" for="tc1">MC</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="type_checks" value="NUMERIC" class="form-check-input" id="tc2">
+                            <label class="form-check-label" for="tc2">Numeric</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="type_checks" value="FREE_RESPONSE" class="form-check-input" id="tc3">
+                            <label class="form-check-label" for="tc3">Free Response</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-gold w-100 py-2" style="font-size: 1rem;">
+                <i class="bi bi-plus-circle me-1"></i>Create Assignment
+            </button>
+            <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
         </div>
-      </div>
     </div>
-
-    <!-- Right Column: Filters -->
-    <div class="col-lg-5">
-      <!-- Chapters -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">Chapters</h5>
-        </div>
-        <div class="card-body" style="max-height:250px; overflow-y:auto;">
-          {% for chapter in chapters %}
-          <div class="form-check">
-            <input type="checkbox" name="chapters" id="ch_{{ chapter.pk }}"
-                   value="{{ chapter.pk }}" class="form-check-input"
-                   {% if chapter.pk in selected_chapters %}checked{% endif %}>
-            <label class="form-check-label" for="ch_{{ chapter.pk }}">
-              Ch {{ chapter.number }}: {{ chapter.title }}
-            </label>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <!-- Difficulty -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">Difficulty</h5>
-        </div>
-        <div class="card-body">
-          <div class="form-check">
-            <input type="checkbox" name="difficulty_filter" id="diff_1"
-                   value="1" class="form-check-input"
-                   {% if 1 in selected_difficulties %}checked{% endif %}>
-            <label class="form-check-label" for="diff_1">
-              <span class="badge bg-success">1</span> Easy
-            </label>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" name="difficulty_filter" id="diff_2"
-                   value="2" class="form-check-input"
-                   {% if 2 in selected_difficulties %}checked{% endif %}>
-            <label class="form-check-label" for="diff_2">
-              <span class="badge bg-warning text-dark">2</span> Medium
-            </label>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" name="difficulty_filter" id="diff_3"
-                   value="3" class="form-check-input"
-                   {% if 3 in selected_difficulties %}checked{% endif %}>
-            <label class="form-check-label" for="diff_3">
-              <span class="badge bg-danger">3</span> Hard
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Skills -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">Skills</h5>
-        </div>
-        <div class="card-body">
-          <div class="form-check">
-            <input type="checkbox" name="skill_filter" id="skill_conceptual"
-                   value="Conceptual" class="form-check-input"
-                   {% if "Conceptual" in selected_skills %}checked{% endif %}>
-            <label class="form-check-label" for="skill_conceptual">Conceptual</label>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" name="skill_filter" id="skill_definition"
-                   value="Definition" class="form-check-input"
-                   {% if "Definition" in selected_skills %}checked{% endif %}>
-            <label class="form-check-label" for="skill_definition">Definition</label>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" name="skill_filter" id="skill_analytical"
-                   value="Analytical" class="form-check-input"
-                   {% if "Analytical" in selected_skills %}checked{% endif %}>
-            <label class="form-check-label" for="skill_analytical">Analytical</label>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="d-flex justify-content-end mb-4">
-    <button type="submit" class="btn btn-primary btn-lg">
-      <i class="bi bi-plus-circle"></i> Create Assignment
-    </button>
-  </div>
 </form>
+
+<script>
+function filterHandpickQuestions() {
+    var search = document.getElementById('handpick-search').value.toLowerCase();
+    document.querySelectorAll('.handpick-item').forEach(function(el) {
+        var text = el.dataset.text;
+        el.style.display = text.includes(search) ? '' : 'none';
+    });
+}
+// Update count
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('manual-q-check')) {
+        var count = document.querySelectorAll('.manual-q-check:checked').length;
+        document.getElementById('handpick-count').textContent = count;
+    }
+});
+</script>
 {% endblock %}

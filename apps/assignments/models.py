@@ -12,6 +12,7 @@ class Assignment(models.Model):
     sections = models.ManyToManyField(Section, blank=True)
     difficulty_filter = models.JSONField(default=list, blank=True)
     skill_filter = models.JSONField(default=list, blank=True)
+    type_filter = models.JSONField(default=list, blank=True)
     num_questions = models.IntegerField()
     mode = models.CharField(max_length=10, choices=MODE_CHOICES)
     is_randomized = models.BooleanField(default=True)

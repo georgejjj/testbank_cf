@@ -87,6 +87,9 @@ def _build_question_pool(assignment):
     if assignment.skill_filter:
         qs = qs.filter(skill__in=assignment.skill_filter)
 
+    if assignment.type_filter:
+        qs = qs.filter(question_type__in=assignment.type_filter)
+
     return list(qs)
 
 

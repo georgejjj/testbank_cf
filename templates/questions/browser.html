@@ -4,7 +4,15 @@
 {% block nav_questions %}active{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Question Browser</h2>
+<div class="page-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2>Question Browser</h2>
+        <p class="page-subtitle">Browse, filter, and edit your question pool</p>
+    </div>
+    <a href="{% url 'question_import' %}" class="btn btn-gold btn-sm">
+        <i class="bi bi-upload me-1"></i>Import .docx
+    </a>
+</div>
 
 <div class="row">
   <!-- Filters Sidebar -->
@@ -61,10 +69,24 @@
           </div>
 
           <div class="mb-3">
+            <label for="typeSelect" class="form-label fw-semibold">Question Type</label>
+            <select id="typeSelect" name="qtype" class="form-select"
+                    hx-get="{% url 'question_browser' %}"
+                    hx-target="#question-list"
+                    hx-include="#filterForm"
+                    hx-trigger="change">
+              <option value="">All Types</option>
+              <option value="MC" {% if filters.qtype == "MC" %}selected{% endif %}>Multiple Choice</option>
+              <option value="NUMERIC" {% if filters.qtype == "NUMERIC" %}selected{% endif %}>Numeric</option>
+              <option value="FREE_RESPONSE" {% if filters.qtype == "FREE_RESPONSE" %}selected{% endif %}>Free Response</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
             <label for="searchInput" class="form-label fw-semibold">Search</label>
-            <input type="text" id="searchInput" name="search" class="form-control"
+            <input type="text" id="searchInput" name="q" class="form-control"
                    placeholder="Search questions..."
-                   value="{{ search_query|default:'' }}"
+                   value="{{ filters.q|default:'' }}"
                    hx-get="{% url 'question_browser' %}"
                    hx-target="#question-list"
                    hx-include="#filterForm"
