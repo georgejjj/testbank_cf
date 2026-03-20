@@ -72,19 +72,30 @@
 
                         <!-- Hand-Pick Tab -->
                         <div class="tab-pane fade" id="handpick-tab">
-                            <p class="text-muted small mb-3">Search and select individual questions. Use the filters on the right to narrow down.</p>
+                            <p class="text-muted small mb-2">Search and select individual questions. Use the filters on the right to narrow down.</p>
 
-                            <input type="text" class="form-control mb-3" placeholder="Search questions..."
-                                   id="handpick-search" onkeyup="filterHandpickQuestions()">
+                            <div class="d-flex gap-2 mb-3 align-items-center">
+                                <input type="text" class="form-control form-control-sm" placeholder="Search questions..."
+                                       id="handpick-search" onkeyup="filterHandpickQuestions()" style="max-width: 250px;">
+                                <span class="text-muted small text-nowrap">Sort by:</span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary active" onclick="sortHandpick('number', this)">ID</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="sortHandpick('section', this)">Section</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="sortHandpick('difficulty', this)">Difficulty</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="sortHandpick('type', this)">Type</button>
+                                </div>
+                            </div>
 
                             <div id="handpick-list" style="max-height: 400px; overflow-y: auto;">
                                 {% for q in all_questions %}
                                 <div class="form-check handpick-item py-1 border-bottom"
                                      data-chapter="{{ q.section.chapter_id }}"
                                      data-section="{{ q.section_id }}"
+                                     data-section-num="{{ q.section.number }}"
                                      data-difficulty="{{ q.difficulty }}"
                                      data-skill="{{ q.skill }}"
                                      data-type="{{ q.question_type }}"
+                                     data-global="{{ q.global_number }}"
                                      data-text="{{ q.text|lower }}">
                                     <input type="checkbox" name="manual_questions" value="{{ q.id }}"
                                            class="form-check-input manual-q-check" id="mq{{ q.id }}">
@@ -98,8 +109,9 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div class="mt-2 text-muted small">
-                                <span id="handpick-count">0</span> questions selected
+                            <div class="mt-2 d-flex justify-content-between">
+                                <span class="text-muted small"><span id="handpick-count">0</span> questions selected</span>
+                                <button type="button" class="btn btn-link btn-sm p-0" onclick="clearHandpick()">Clear selection</button>
                             </div>
                         </div>
                     </div>
@@ -210,7 +222,6 @@ function toggleChapterSections(checkbox) {
         sectionGroup.classList.remove('d-none');
     } else {
         sectionGroup.classList.add('d-none');
-        // Uncheck all sections when chapter unchecked
         sectionGroup.querySelectorAll('.section-check').forEach(function(s) { s.checked = false; });
     }
     filterHandpickQuestions();
@@ -218,14 +229,10 @@ function toggleChapterSections(checkbox) {
 
 function filterHandpickQuestions() {
     var search = document.getElementById('handpick-search').value.toLowerCase();
-
-    // Get selected chapters
     var selectedChapters = new Set();
     document.querySelectorAll('.chapter-check:checked').forEach(function(el) {
         selectedChapters.add(el.dataset.chapter);
     });
-
-    // Get selected sections
     var selectedSections = new Set();
     document.querySelectorAll('.section-check:checked').forEach(function(el) {
         selectedSections.add(el.dataset.section);
@@ -233,27 +240,43 @@ function filterHandpickQuestions() {
 
     document.querySelectorAll('.handpick-item').forEach(function(el) {
         var show = true;
-
-        // Filter by text search
         if (search && !el.dataset.text.includes(search)) show = false;
-
-        // Filter by chapter (if any selected)
         if (show && selectedChapters.size > 0 && !selectedChapters.has(el.dataset.chapter)) show = false;
-
-        // Filter by section (if any selected within the chapter)
         if (show && selectedSections.size > 0 && !selectedSections.has(el.dataset.section)) show = false;
-
         el.style.display = show ? '' : 'none';
     });
+}
+
+function sortHandpick(field, btn) {
+    // Update active button
+    btn.closest('.btn-group').querySelectorAll('.btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+
+    var list = document.getElementById('handpick-list');
+    var items = Array.from(list.querySelectorAll('.handpick-item'));
+
+    items.sort(function(a, b) {
+        if (field === 'number') return parseInt(a.dataset.global) - parseInt(b.dataset.global);
+        if (field === 'section') return a.dataset.sectionNum.localeCompare(b.dataset.sectionNum, undefined, {numeric: true});
+        if (field === 'difficulty') return parseInt(a.dataset.difficulty) - parseInt(b.dataset.difficulty);
+        if (field === 'type') return a.dataset.type.localeCompare(b.dataset.type);
+        return 0;
+    });
+
+    items.forEach(function(item) { list.appendChild(item); });
+}
+
+function clearHandpick() {
+    document.querySelectorAll('.manual-q-check:checked').forEach(function(cb) { cb.checked = false; });
+    document.getElementById('handpick-count').textContent = '0';
 }
 
 // Update count on checkbox change
 document.addEventListener('change', function(e) {
     if (e.target.classList.contains('manual-q-check')) {
-        var count = document.querySelectorAll('.manual-q-check:checked').length;
-        document.getElementById('handpick-count').textContent = count;
+        document.getElementById('handpick-count').textContent =
+            document.querySelectorAll('.manual-q-check:checked').length;
     }
-    // Re-filter hand-pick list when chapter/section checkboxes change
     if (e.target.classList.contains('section-check')) {
         filterHandpickQuestions();
     }

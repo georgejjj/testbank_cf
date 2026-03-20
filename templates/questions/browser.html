@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block title %}Question Browser - TestBank{% endblock %}
-{% block nav_questions %}active{% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-end">
@@ -9,9 +8,14 @@
         <h2>Question Browser</h2>
         <p class="page-subtitle">Browse, filter, and edit your question pool</p>
     </div>
-    <a href="{% url 'question_import' %}" class="btn btn-gold btn-sm">
-        <i class="bi bi-upload me-1"></i>Import .docx
-    </a>
+    <div>
+        <a href="{% url 'database_backup' %}" class="btn btn-outline-secondary btn-sm me-2">
+            <i class="bi bi-download me-1"></i>Backup DB
+        </a>
+        <a href="{% url 'question_import' %}" class="btn btn-gold btn-sm">
+            <i class="bi bi-upload me-1"></i>Import .docx
+        </a>
+    </div>
 </div>
 
 <div class="row">
@@ -19,63 +23,80 @@
   <div class="col-lg-3">
     <div class="card shadow-sm mb-3">
       <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        <h6 class="mb-0"><i class="bi bi-funnel me-1"></i>Filters</h6>
       </div>
       <div class="card-body">
         <form id="filterForm">
           <div class="mb-3">
-            <label for="chapterSelect" class="form-label fw-semibold">Chapter</label>
-            <select id="chapterSelect" name="chapter" class="form-select"
+            <label class="form-label fw-semibold">Chapter</label>
+            <select name="chapter" class="form-select form-select-sm"
                     hx-get="{% url 'question_browser' %}"
                     hx-target="#question-list"
                     hx-include="#filterForm"
-                    hx-trigger="change">
+                    hx-trigger="change"
+                    id="chapterSelect">
               <option value="">All Chapters</option>
               {% for chapter in chapters %}
-              <option value="{{ chapter.pk }}"
-                      {% if selected_chapter == chapter.pk|stringformat:"d" %}selected{% endif %}>
-                Ch {{ chapter.number }}: {{ chapter.title }}
+              <option value="{{ chapter.pk }}" {% if filters.chapter == chapter.pk|stringformat:"d" %}selected{% endif %}>
+                Ch {{ chapter.number }}: {{ chapter.title|truncatechars:25 }}
               </option>
               {% endfor %}
             </select>
           </div>
 
           <div class="mb-3">
-            <label for="difficultySelect" class="form-label fw-semibold">Difficulty</label>
-            <select id="difficultySelect" name="difficulty" class="form-select"
+            <label class="form-label fw-semibold">Section</label>
+            <select name="section" class="form-select form-select-sm"
                     hx-get="{% url 'question_browser' %}"
                     hx-target="#question-list"
                     hx-include="#filterForm"
-                    hx-trigger="change">
-              <option value="">All Difficulties</option>
-              <option value="1" {% if selected_difficulty == "1" %}selected{% endif %}>1 - Easy</option>
-              <option value="2" {% if selected_difficulty == "2" %}selected{% endif %}>2 - Medium</option>
-              <option value="3" {% if selected_difficulty == "3" %}selected{% endif %}>3 - Hard</option>
+                    hx-trigger="change"
+                    id="sectionSelect">
+              <option value="">All Sections</option>
+              {% for sec in sections %}
+              <option value="{{ sec.pk }}" {% if filters.section == sec.pk|stringformat:"d" %}selected{% endif %}>
+                {{ sec.number }} {{ sec.title|truncatechars:25 }}
+              </option>
+              {% endfor %}
             </select>
           </div>
 
           <div class="mb-3">
-            <label for="skillSelect" class="form-label fw-semibold">Skill</label>
-            <select id="skillSelect" name="skill" class="form-select"
+            <label class="form-label fw-semibold">Difficulty</label>
+            <select name="difficulty" class="form-select form-select-sm"
                     hx-get="{% url 'question_browser' %}"
                     hx-target="#question-list"
                     hx-include="#filterForm"
                     hx-trigger="change">
-              <option value="">All Skills</option>
-              <option value="Conceptual" {% if selected_skill == "Conceptual" %}selected{% endif %}>Conceptual</option>
-              <option value="Definition" {% if selected_skill == "Definition" %}selected{% endif %}>Definition</option>
-              <option value="Analytical" {% if selected_skill == "Analytical" %}selected{% endif %}>Analytical</option>
+              <option value="">All</option>
+              <option value="1" {% if filters.difficulty == "1" %}selected{% endif %}>1 - Easy</option>
+              <option value="2" {% if filters.difficulty == "2" %}selected{% endif %}>2 - Medium</option>
+              <option value="3" {% if filters.difficulty == "3" %}selected{% endif %}>3 - Hard</option>
             </select>
           </div>
 
           <div class="mb-3">
-            <label for="typeSelect" class="form-label fw-semibold">Question Type</label>
-            <select id="typeSelect" name="qtype" class="form-select"
+            <label class="form-label fw-semibold">Skill</label>
+            <select name="skill" class="form-select form-select-sm"
                     hx-get="{% url 'question_browser' %}"
                     hx-target="#question-list"
                     hx-include="#filterForm"
                     hx-trigger="change">
-              <option value="">All Types</option>
+              <option value="">All</option>
+              <option value="Conceptual" {% if filters.skill == "Conceptual" %}selected{% endif %}>Conceptual</option>
+              <option value="Definition" {% if filters.skill == "Definition" %}selected{% endif %}>Definition</option>
+              <option value="Analytical" {% if filters.skill == "Analytical" %}selected{% endif %}>Analytical</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type</label>
+            <select name="qtype" class="form-select form-select-sm"
+                    hx-get="{% url 'question_browser' %}"
+                    hx-target="#question-list"
+                    hx-include="#filterForm"
+                    hx-trigger="change">
+              <option value="">All</option>
               <option value="MC" {% if filters.qtype == "MC" %}selected{% endif %}>Multiple Choice</option>
               <option value="NUMERIC" {% if filters.qtype == "NUMERIC" %}selected{% endif %}>Numeric</option>
               <option value="FREE_RESPONSE" {% if filters.qtype == "FREE_RESPONSE" %}selected{% endif %}>Free Response</option>
@@ -83,8 +104,8 @@
           </div>
 
           <div class="mb-3">
-            <label for="searchInput" class="form-label fw-semibold">Search</label>
-            <input type="text" id="searchInput" name="q" class="form-control"
+            <label class="form-label fw-semibold">Search</label>
+            <input type="text" name="q" class="form-control form-control-sm"
                    placeholder="Search questions..."
                    value="{{ filters.q|default:'' }}"
                    hx-get="{% url 'question_browser' %}"
@@ -104,4 +125,16 @@
     </div>
   </div>
 </div>
+
+<script>
+// When chapter changes, reload page so sections dropdown updates
+document.getElementById('chapterSelect').addEventListener('change', function() {
+    // Build URL with current filters
+    var form = document.getElementById('filterForm');
+    var params = new URLSearchParams(new FormData(form));
+    // Reset section when chapter changes
+    params.delete('section');
+    window.location.href = '{% url "question_browser" %}?' + params.toString();
+});
+</script>
 {% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Confirm Import - TestBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Confirm Import</h2>
+    <p class="page-subtitle">Review before importing into the database</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-file-earmark-text me-2"></i>File: {{ filename }}</div>
+            <div class="card-body">
+                <h5 style="font-family: var(--font-display);">
+                    Chapter {{ result.chapter_number }}: {{ result.chapter_title }}
+                </h5>
+
+                {% if existing_chapter %}
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Chapter {{ existing_chapter.number }} already exists</strong> with {{ existing_count }} questions.
+                    <br>Importing will <strong>update</strong> existing questions (matched by section + question number) and add new ones. No existing questions will be deleted.
+                </div>
+                {% endif %}
+
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_questions }}</div>
+                            <div class="stat-label">Questions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_sections }}</div>
+                            <div class="stat-label">Sections</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_images }}</div>
+                            <div class="stat-label">Images</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card accent">
+                            <div class="stat-value">{{ type_counts.MC }}</div>
+                            <div class="stat-label">MC Questions</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mt-4">Question Type Breakdown</h6>
+                <table class="table table-sm" style="max-width: 400px;">
+                    <tr><td>Multiple Choice</td><td class="fw-bold">{{ type_counts.MC }}</td></tr>
+                    <tr><td>Numeric</td><td class="fw-bold">{{ type_counts.NUMERIC }}</td></tr>
+                    <tr><td>Free Response</td><td class="fw-bold">{{ type_counts.FREE_RESPONSE }}</td></tr>
+                </table>
+
+                <h6 class="mt-3">Sections Found</h6>
+                <ul class="list-group list-group-flush" style="max-width: 500px;">
+                    {% for sec in result.sections %}
+                    <li class="list-group-item py-1" style="font-size: 0.9rem;">{{ sec.number }} {{ sec.title }}</li>
+                    {% endfor %}
+                </ul>
+
+                <h6 class="mt-3">Sample Questions (first 5)</h6>
+                {% for q in result.questions|slice:":5" %}
+                <div class="border rounded p-2 mb-2" style="font-size: 0.88rem;">
+                    <span class="badge badge-type me-1">{{ q.question_type|default:"?" }}</span>
+                    <span class="badge badge-difficulty-{{ q.difficulty|default:1 }} me-1">D{{ q.difficulty|default:"?" }}</span>
+                    <strong>Q{{ q.question_number }}</strong> ({{ q.section_number }})
+                    — {{ q.text|truncatechars:100 }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h6>Ready to import?</h6>
+                <p class="text-muted small">
+                    This will add {{ total_questions }} questions to Chapter {{ result.chapter_number }}.
+                    {% if existing_chapter %}Existing questions with the same number will be updated.{% endif %}
+                </p>
+
+                <form method="post" action="{% url 'question_import' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="confirm" value="yes">
+                    <input type="hidden" name="tmp_path" value="{{ tmp_path }}">
+                    <button type="submit" class="btn btn-gold w-100 mb-2">
+                        <i class="bi bi-check-circle me-1"></i>Confirm Import
+                    </button>
+                </form>
+                <a href="{% url 'question_import' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
