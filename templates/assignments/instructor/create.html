@@ -81,6 +81,7 @@
                                 {% for q in all_questions %}
                                 <div class="form-check handpick-item py-1 border-bottom"
                                      data-chapter="{{ q.section.chapter_id }}"
+                                     data-section="{{ q.section_id }}"
                                      data-difficulty="{{ q.difficulty }}"
                                      data-skill="{{ q.skill }}"
                                      data-type="{{ q.question_type }}"
@@ -91,7 +92,8 @@
                                         <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
                                         <span class="badge badge-difficulty-{{ q.difficulty }} me-1">D{{ q.difficulty }}</span>
                                         <strong>{{ q.uid }}</strong>
-                                        — {{ q.text|truncatechars:80 }}
+                                        <span class="text-muted">({{ q.section.number }})</span>
+                                        — {{ q.text|truncatechars:70 }}
                                     </label>
                                 </div>
                                 {% endfor %}
@@ -108,12 +110,32 @@
         <!-- Right: Filters -->
         <div class="col-lg-5">
             <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-funnel me-2"></i>Chapters</div>
-                <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                <div class="card-header"><i class="bi bi-funnel me-2"></i>Chapters & Sections</div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
                     {% for chapter in chapters %}
-                    <div class="form-check">
-                        <input type="checkbox" name="chapters" value="{{ chapter.pk }}" class="form-check-input" id="ch{{ chapter.pk }}">
-                        <label class="form-check-label" for="ch{{ chapter.pk }}">Ch {{ chapter.number }}: {{ chapter.title }}</label>
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input type="checkbox" name="chapters" value="{{ chapter.pk }}"
+                                   class="form-check-input chapter-check" id="ch{{ chapter.pk }}"
+                                   data-chapter="{{ chapter.pk }}"
+                                   onchange="toggleChapterSections(this)">
+                            <label class="form-check-label fw-semibold" for="ch{{ chapter.pk }}">
+                                Ch {{ chapter.number }}: {{ chapter.title }}
+                            </label>
+                        </div>
+                        <div class="ms-4 section-group d-none" id="sections-ch{{ chapter.pk }}">
+                            {% for sec in chapter.sections.all %}
+                            <div class="form-check">
+                                <input type="checkbox" name="sections" value="{{ sec.pk }}"
+                                       class="form-check-input section-check"
+                                       data-chapter="{{ chapter.pk }}" data-section="{{ sec.pk }}"
+                                       id="sec{{ sec.pk }}">
+                                <label class="form-check-label" for="sec{{ sec.pk }}" style="font-size: 0.88rem;">
+                                    {{ sec.number }} {{ sec.title }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -181,18 +203,59 @@
 </form>
 
 <script>
+function toggleChapterSections(checkbox) {
+    var chId = checkbox.dataset.chapter;
+    var sectionGroup = document.getElementById('sections-ch' + chId);
+    if (checkbox.checked) {
+        sectionGroup.classList.remove('d-none');
+    } else {
+        sectionGroup.classList.add('d-none');
+        // Uncheck all sections when chapter unchecked
+        sectionGroup.querySelectorAll('.section-check').forEach(function(s) { s.checked = false; });
+    }
+    filterHandpickQuestions();
+}
+
 function filterHandpickQuestions() {
     var search = document.getElementById('handpick-search').value.toLowerCase();
+
+    // Get selected chapters
+    var selectedChapters = new Set();
+    document.querySelectorAll('.chapter-check:checked').forEach(function(el) {
+        selectedChapters.add(el.dataset.chapter);
+    });
+
+    // Get selected sections
+    var selectedSections = new Set();
+    document.querySelectorAll('.section-check:checked').forEach(function(el) {
+        selectedSections.add(el.dataset.section);
+    });
+
     document.querySelectorAll('.handpick-item').forEach(function(el) {
-        var text = el.dataset.text;
-        el.style.display = text.includes(search) ? '' : 'none';
+        var show = true;
+
+        // Filter by text search
+        if (search && !el.dataset.text.includes(search)) show = false;
+
+        // Filter by chapter (if any selected)
+        if (show && selectedChapters.size > 0 && !selectedChapters.has(el.dataset.chapter)) show = false;
+
+        // Filter by section (if any selected within the chapter)
+        if (show && selectedSections.size > 0 && !selectedSections.has(el.dataset.section)) show = false;
+
+        el.style.display = show ? '' : 'none';
     });
 }
-// Update count
+
+// Update count on checkbox change
 document.addEventListener('change', function(e) {
     if (e.target.classList.contains('manual-q-check')) {
         var count = document.querySelectorAll('.manual-q-check:checked').length;
         document.getElementById('handpick-count').textContent = count;
+    }
+    // Re-filter hand-pick list when chapter/section checkboxes change
+    if (e.target.classList.contains('section-check')) {
+        filterHandpickQuestions();
     }
 });
 </script>

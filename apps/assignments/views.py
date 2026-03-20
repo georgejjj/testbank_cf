@@ -108,6 +108,10 @@ def assignment_create(request):
         if chapter_ids:
             assignment.chapters.set(chapter_ids)
 
+        section_ids = request.POST.getlist('sections')
+        if section_ids:
+            assignment.sections.set(section_ids)
+
         manual_ids = request.POST.getlist('manual_questions')
         if manual_ids:
             assignment.manually_selected_questions.set(manual_ids)
