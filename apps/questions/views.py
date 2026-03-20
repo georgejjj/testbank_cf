@@ -198,17 +198,76 @@ def database_backup(request):
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
-    db_path = settings.DATABASES['default']['NAME']
-    # Create a safe backup copy
+    import sqlite3 as sqlite3_lib
+    db_path = str(settings.DATABASES['default']['NAME'])
     backup_path = tempfile.mktemp(suffix='.sqlite3')
-    os.system(f'sqlite3 "{db_path}" ".backup \'{backup_path}\'"')
+
+    # Use Python's sqlite3 backup API (safe even with WAL mode)
+    src = sqlite3_lib.connect(db_path)
+    dst = sqlite3_lib.connect(backup_path)
+    src.backup(dst)
+    dst.close()
+    src.close()
 
     response = FileResponse(open(backup_path, 'rb'), content_type='application/x-sqlite3')
     response['Content-Disposition'] = 'attachment; filename="testbank_backup.sqlite3"'
-
-    # Clean up after response is sent
-    response._backup_path = backup_path
     return response
+
+
+@login_required
+def database_restore(request):
+    """Restore database from an uploaded backup file."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    if request.method == 'POST' and request.FILES.get('backup_file'):
+        backup_file = request.FILES['backup_file']
+
+        # Save uploaded file to temp
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.sqlite3') as tmp:
+            for chunk in backup_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        # Validate it's a real SQLite database
+        import sqlite3 as sqlite3_lib
+        try:
+            conn = sqlite3_lib.connect(tmp_path)
+            # Check it has our tables
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = {row[0] for row in cursor.fetchall()}
+            conn.close()
+
+            required = {'questions_question', 'accounts_user', 'assignments_assignment'}
+            if not required.issubset(tables):
+                os.unlink(tmp_path)
+                messages.error(request, 'Invalid backup file — missing required tables.')
+                return redirect('question_browser')
+        except Exception:
+            os.unlink(tmp_path)
+            messages.error(request, 'Invalid file — not a valid SQLite database.')
+            return redirect('question_browser')
+
+        # Close all Django DB connections before replacing
+        from django.db import connections
+        for conn_name in connections:
+            connections[conn_name].close()
+
+        # Replace the database file
+        db_path = str(settings.DATABASES['default']['NAME'])
+        shutil.copy2(tmp_path, db_path)
+        os.unlink(tmp_path)
+
+        # Remove WAL/SHM files so SQLite starts fresh
+        for ext in ['-wal', '-shm']:
+            wal_path = db_path + ext
+            if os.path.exists(wal_path):
+                os.unlink(wal_path)
+
+        messages.success(request, 'Database restored from backup. Please log in again.')
+        return redirect('login')
+
+    return render(request, 'questions/restore.html')
 
 
 @login_required
