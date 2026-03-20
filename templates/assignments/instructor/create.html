@@ -90,7 +90,7 @@
                                     <label class="form-check-label" for="mq{{ q.id }}" style="font-size: 0.88rem;">
                                         <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
                                         <span class="badge badge-difficulty-{{ q.difficulty }} me-1">D{{ q.difficulty }}</span>
-                                        <strong>Q{{ q.question_number }}</strong> ({{ q.section.number }})
+                                        <strong>{{ q.uid }}</strong>
                                         — {{ q.text|truncatechars:80 }}
                                     </label>
                                 </div>
@@ -124,9 +124,6 @@
                 <div class="card-body">
                     <label class="form-label">Difficulty</label>
                     <div class="mb-3">
-                        {% for val, label in "1:Easy,2:Medium,3:Hard" %}
-                        <!-- handled below -->
-                        {% endfor %}
                         <div class="form-check form-check-inline">
                             <input type="checkbox" name="difficulty_checks" value="1" class="form-check-input" id="dc1">
                             <label class="form-check-label" for="dc1"><span class="badge badge-difficulty-1">Easy</span></label>

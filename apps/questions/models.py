@@ -55,17 +55,24 @@ class Question(models.Model):
     explanation = models.TextField(blank=True, default='')
     image = models.CharField(max_length=500, blank=True, default='')
     context_group = models.ForeignKey(ContextGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='questions')
-    question_number = models.IntegerField()
+    question_number = models.IntegerField()  # Original number from Word file (per-section, not unique across chapters)
+    global_number = models.IntegerField(default=0)  # Unique sequential number within a chapter (set during import)
     answer_raw_text = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [['section', 'question_number']]
-        ordering = ['question_number']
+        ordering = ['global_number']
+
+    @property
+    def uid(self):
+        """Unique human-readable ID like CH4-037."""
+        ch_num = self.section.chapter.number
+        return f"CH{ch_num}-{self.global_number:03d}"
 
     def __str__(self):
-        return f"Q{self.question_number}: {self.text[:60]}"
+        return f"{self.uid}: {self.text[:60]}"
 
 
 class MCChoice(models.Model):

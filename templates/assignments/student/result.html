@@ -10,7 +10,7 @@
 <div class="card mb-2">
     <div class="card-body">
         <div class="d-flex justify-content-between">
-            <span>Q{{ r.answer.question.question_number }}</span>
+            <span>{{ r.answer.question.uid }}</span>
             {% if r.answer.is_correct %}
             <span class="badge bg-success">Correct</span>
             {% elif r.answer.is_correct is False %}

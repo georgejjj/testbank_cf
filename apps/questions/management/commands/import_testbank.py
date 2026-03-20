@@ -1,4 +1,5 @@
 import os
+from django.db import models
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from questions.models import Chapter, Section, ContextGroup, Question, MCChoice, NumericAnswer
@@ -62,6 +63,12 @@ class Command(BaseCommand):
                 f.write(img_data)
 
         # Import questions
+        # Determine starting global_number (for appending to existing chapters)
+        existing_max = Question.objects.filter(section__chapter=chapter).aggregate(
+            max_gn=models.Max('global_number')
+        )['max_gn'] or 0
+        global_counter = existing_max  # Will increment before assigning
+
         counts = {'MC': 0, 'NUMERIC': 0, 'FREE_RESPONSE': 0}
         warnings = 0
         context_cache = {}
@@ -114,6 +121,7 @@ class Command(BaseCommand):
 
             # Create or update question
             q_type = q_data.get('question_type') or 'FREE_RESPONSE'
+            global_counter += 1
             question, created = Question.objects.update_or_create(
                 section=section,
                 question_number=q_data['question_number'],
@@ -125,6 +133,7 @@ class Command(BaseCommand):
                     'explanation': q_data.get('explanation', ''),
                     'image': image_path,
                     'context_group': context_group,
+                    'global_number': global_counter,
                     'answer_raw_text': q_data.get('answer_raw_text', ''),
                 },
             )
