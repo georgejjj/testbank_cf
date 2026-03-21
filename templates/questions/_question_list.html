@@ -1,39 +1,59 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="text-muted">{{ questions|length }} question{{ questions|length|pluralize }} found</span>
+<!-- Sort & per-page controls -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <span class="text-muted">{{ total_count }} question{{ total_count|pluralize }} found</span>
+  <div class="d-flex align-items-center gap-2">
+    <span class="text-muted small text-nowrap">Sort:</span>
+    <select class="form-select form-select-sm" style="width: auto;" id="sortSelect"
+            onchange="updateBrowserParam('sort', this.value)">
+      <option value="default" {% if filters.sort == "default" %}selected{% endif %}>Chapter + Number</option>
+      <option value="section" {% if filters.sort == "section" %}selected{% endif %}>Section</option>
+      <option value="difficulty" {% if filters.sort == "difficulty" %}selected{% endif %}>Difficulty (asc)</option>
+      <option value="difficulty_desc" {% if filters.sort == "difficulty_desc" %}selected{% endif %}>Difficulty (desc)</option>
+      <option value="type" {% if filters.sort == "type" %}selected{% endif %}>Type</option>
+      <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Newest First</option>
+    </select>
+    <span class="text-muted small text-nowrap">Show:</span>
+    <select class="form-select form-select-sm" style="width: auto;" id="perPageSelect"
+            onchange="updateBrowserParam('per_page', this.value)">
+      <option value="20" {% if filters.per_page == "20" %}selected{% endif %}>20</option>
+      <option value="50" {% if filters.per_page == "50" %}selected{% endif %}>50</option>
+      <option value="100" {% if filters.per_page == "100" %}selected{% endif %}>100</option>
+    </select>
+  </div>
 </div>
 
-{% for q in questions %}
+{% for q in page_obj %}
 <div class="card mb-3 shadow-sm">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
     <div>
       <span class="badge bg-secondary me-1">{{ q.uid }}</span>
-      <span class="badge bg-info text-dark me-1">{{ q.get_question_type_display }}</span>
-      <span class="badge bg-{% if q.difficulty == 1 %}success{% elif q.difficulty == 2 %}warning{% else %}danger{% endif %} me-1">
-        Difficulty {{ q.difficulty }}
+      <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
+      <span class="badge badge-difficulty-{{ q.difficulty }} me-1">
+        D{{ q.difficulty }}
       </span>
-      <span class="badge bg-primary">{{ q.skill }}</span>
+      <span class="badge badge-skill">{{ q.skill }}</span>
     </div>
     <small class="text-muted">{{ q.section }}</small>
   </div>
   <div class="card-body">
 
     {% if q.context_group and q.context_group.text|length > 60 %}
-    <div class="alert alert-light border mb-3">
-      <small class="text-muted d-block mb-1"><strong>Context:</strong></small>
-      <div>{{ q.context_group.text|truncatewords:40|safe }}</div>
+    <div class="context-block mb-3" style="font-size: 0.88rem;">
+      <div class="context-label">Context</div>
+      {{ q.context_group.text|truncatewords:40|safe }}
     </div>
     {% endif %}
     {% if q.context_group and q.context_group.image %}
     <div class="mb-3">
       <img src="{{ MEDIA_URL }}{{ q.context_group.image }}"
-           class="img-fluid" style="max-height:200px;" alt="Context image">
+           class="img-fluid rounded" style="max-height:200px;" alt="Context image">
     </div>
     {% endif %}
 
     {% if q.image %}
     <div class="mb-3">
       <img src="{{ MEDIA_URL }}{{ q.image }}"
-           class="img-fluid" style="max-height:250px;" alt="Question image">
+           class="img-fluid rounded" style="max-height:250px;" alt="Question image">
     </div>
     {% endif %}
 
@@ -73,3 +93,66 @@
   <p class="mt-2">No questions found matching your filters.</p>
 </div>
 {% endfor %}
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </small>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '1')">
+          <i class="bi bi-chevron-double-left"></i>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '{{ page_obj.previous_page_number }}')">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+        <li class="page-item">
+          <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '{{ num }}')">{{ num }}</a>
+        </li>
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+        <li class="page-item">
+          <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '{{ num }}')">{{ num }}</a>
+        </li>
+        {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '{{ page_obj.next_page_number }}')">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="javascript:void(0)" onclick="updateBrowserParam('page', '{{ page_obj.paginator.num_pages }}')">
+          <i class="bi bi-chevron-double-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+{% endif %}
+
+<script>
+function updateBrowserParam(key, value) {
+    var params = new URLSearchParams(window.location.search);
+    params.set(key, value);
+    if (key !== 'page') params.delete('page');  // Reset to page 1 when changing sort/per_page
+    window.location.href = '{% url "question_browser" %}?' + params.toString();
+}
+</script>

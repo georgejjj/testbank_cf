@@ -17,6 +17,8 @@ def question_browser(request):
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
+    from django.core.paginator import Paginator
+
     chapters = Chapter.objects.prefetch_related('sections')
     selected_chapter = request.GET.get('chapter')
     selected_section = request.GET.get('section')
@@ -24,6 +26,15 @@ def question_browser(request):
     selected_skill = request.GET.get('skill')
     selected_type = request.GET.get('qtype')
     search = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'default')
+    per_page = request.GET.get('per_page', '20')
+
+    try:
+        per_page = int(per_page)
+        if per_page not in (20, 50, 100):
+            per_page = 20
+    except ValueError:
+        per_page = 20
 
     questions = Question.objects.select_related(
         'section__chapter', 'context_group'
@@ -42,28 +53,49 @@ def question_browser(request):
     if search:
         questions = questions.filter(text__icontains=search)
 
-    questions = questions[:100]
+    # Sorting
+    sort_options = {
+        'default': ('section__chapter__number', 'global_number'),
+        'difficulty': ('difficulty', 'section__chapter__number', 'global_number'),
+        'difficulty_desc': ('-difficulty', 'section__chapter__number', 'global_number'),
+        'section': ('section__number', 'global_number'),
+        'type': ('question_type', 'section__chapter__number', 'global_number'),
+        'newest': ('-created_at',),
+    }
+    questions = questions.order_by(*sort_options.get(sort_by, sort_options['default']))
+
+    # Pagination
+    paginator = Paginator(questions, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     # Build sections list for selected chapter
     sections = []
     if selected_chapter:
         sections = Section.objects.filter(chapter_id=selected_chapter).order_by('sort_order')
 
+    filters = {
+        'chapter': selected_chapter,
+        'section': selected_section,
+        'difficulty': selected_difficulty,
+        'skill': selected_skill,
+        'qtype': selected_type,
+        'q': search,
+        'sort': sort_by,
+        'per_page': str(per_page),
+    }
+
     if request.headers.get('HX-Request'):
-        return render(request, 'questions/_question_list.html', {'questions': questions})
+        return render(request, 'questions/_question_list.html', {
+            'page_obj': page_obj, 'filters': filters, 'total_count': paginator.count,
+        })
 
     return render(request, 'questions/browser.html', {
         'chapters': chapters,
         'sections': sections,
-        'questions': questions,
-        'filters': {
-            'chapter': selected_chapter,
-            'section': selected_section,
-            'difficulty': selected_difficulty,
-            'skill': selected_skill,
-            'qtype': selected_type,
-            'q': search,
-        },
+        'page_obj': page_obj,
+        'filters': filters,
+        'total_count': paginator.count,
     })
 
 
