@@ -606,7 +606,9 @@ def mistake_collection(request):
     chapter_filter = request.GET.get('chapter')
     mistakes = MistakeEntry.objects.filter(
         student=request.user, is_mastered=False,
-    ).select_related('question__section__chapter').order_by('-added_at')
+    ).select_related(
+        'question__section__chapter', 'question__context_group'
+    ).prefetch_related('question__choices').order_by('-added_at')
 
     if chapter_filter:
         mistakes = mistakes.filter(question__section__chapter_id=chapter_filter)

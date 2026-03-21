@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Mistake Collection{% endblock %}
 {% block content %}
-<h2>Mistake Collection ({{ mistakes.count }})</h2>
+<div class="page-header">
+    <h2>Mistake Collection ({{ mistakes.count }})</h2>
+    <p class="page-subtitle">Review the questions you got wrong</p>
+</div>
+
 <div class="d-flex justify-content-between mb-3">
     <select class="form-select form-select-sm" style="width: auto;" onchange="window.location='?chapter='+this.value">
         <option value="">All Chapters</option>
@@ -11,30 +15,95 @@
     </select>
     {% if mistakes.count > 0 %}
     <form method="post" action="{% url 'practice_mistakes' %}">{% csrf_token %}
-        <button class="btn btn-primary btn-sm">Re-Practice All</button>
+        <button class="btn btn-gold btn-sm"><i class="bi bi-lightning me-1"></i>Re-Practice All</button>
     </form>
     {% endif %}
 </div>
+
 {% for me in mistakes %}
-<div class="card mb-2">
-    <div class="card-body">
-        <div class="d-flex justify-content-between">
-            <span>
-                <span class="badge bg-secondary">Ch {{ me.question.section.chapter.number }}</span>
-                {{ me.question.uid }}
-                <span class="badge bg-warning text-dark">Diff {{ me.question.difficulty }}</span>
-            </span>
-            <span>
-                {% if me.times_practiced > 0 %}<small class="text-muted">Practiced {{ me.times_practiced }}x</small>{% endif %}
-                <form method="post" action="{% url 'mark_mastered' me.pk %}" class="d-inline">{% csrf_token %}
-                    <button class="btn btn-sm btn-outline-success">Mark Mastered</button>
-                </form>
-            </span>
+<div class="card mb-2 fade-in">
+    <!-- Collapsed header — click to expand -->
+    <div class="card-header d-flex justify-content-between align-items-center py-2"
+         style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#mistake-{{ me.pk }}">
+        <div>
+            <span class="badge bg-secondary me-1">Ch {{ me.question.section.chapter.number }}</span>
+            <span class="badge badge-type me-1">{{ me.question.get_question_type_display }}</span>
+            <span class="badge badge-difficulty-{{ me.question.difficulty }}">D{{ me.question.difficulty }}</span>
+            <strong class="ms-1">{{ me.question.uid }}</strong>
+            <span class="text-muted ms-1" style="font-size: 0.85rem;">— {{ me.question.text|truncatechars:80 }}</span>
         </div>
-        <p class="mt-2 mb-0">{{ me.question.text|truncatechars:200 }}</p>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            {% if me.times_practiced > 0 %}
+            <small class="text-muted">{{ me.times_practiced }}x practiced</small>
+            {% endif %}
+            <i class="bi bi-chevron-down text-muted"></i>
+        </div>
+    </div>
+
+    <!-- Expanded detail -->
+    <div class="collapse" id="mistake-{{ me.pk }}">
+        <div class="card-body">
+            {% if me.question.context_group and me.question.context_group.text|length > 60 %}
+            <div class="context-block mb-3" style="font-size: 0.88rem;">
+                <div class="context-label">Reference Information</div>
+                {{ me.question.context_group.text|safe }}
+            </div>
+            {% endif %}
+
+            {% if me.question.image %}
+            <div class="mb-3">
+                <img src="{{ MEDIA_URL }}{{ me.question.image }}" class="img-fluid rounded" style="max-height: 250px;">
+            </div>
+            {% endif %}
+
+            <p class="question-text">{{ me.question.text }}</p>
+
+            {% if me.question.question_type == 'MC' %}
+            <div class="mb-3">
+                {% for choice in me.question.choices.all %}
+                <div class="choice-option {% if choice.is_correct %}correct{% endif %}" style="cursor: default; padding: 0.5rem 0.85rem;">
+                    <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.letter }})</strong>
+                    {{ choice.text }}
+                    {% if choice.is_correct %}
+                    <i class="bi bi-check-circle-fill text-success float-end mt-1"></i>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if me.question.answer_raw_text %}
+            <div class="mb-3">
+                <strong class="small text-muted">Answer:</strong>
+                <span>{{ me.question.answer_raw_text }}</span>
+            </div>
+            {% endif %}
+
+            {% if me.question.explanation %}
+            <div class="context-block">
+                <div class="context-label">Explanation</div>
+                {{ me.question.explanation }}
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between mt-3 pt-2" style="border-top: 1px solid var(--warm-border);">
+                <small class="text-muted">
+                    {{ me.question.section }} &middot; {{ me.question.skill }}
+                    {% if me.last_practiced_at %} &middot; Last practiced: {{ me.last_practiced_at|date:"M d" }}{% endif %}
+                </small>
+                <form method="post" action="{% url 'mark_mastered' me.pk %}">{% csrf_token %}
+                    <button class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-check2-circle me-1"></i>Mark Mastered
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% empty %}
-<p class="text-muted">No mistakes to review. Great job!</p>
+<div class="text-center text-muted py-5">
+    <i class="bi bi-trophy" style="font-size: 2.5rem; opacity: 0.3;"></i>
+    <p class="mt-2">No mistakes to review. Great job!</p>
+</div>
 {% endfor %}
 {% endblock %}
