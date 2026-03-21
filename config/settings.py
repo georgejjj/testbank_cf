@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-1x)&o_x16r-m8=exz+o3tjnog3t*)vo1!_#gm9=-91-n$i9*zm
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['testbank.fin-tech.fun', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -146,8 +146,8 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 # Trust X-Forwarded-Proto from nginx for HTTPS detection
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
-    # Add your subdomain here, e.g.:
-    # 'https://testbank.yourdomain.com',
+    'https://testbank.fin-tech.fun',
+    'http://testbank.fin-tech.fun',
 ]
 
 # Default primary key field type
