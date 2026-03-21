@@ -218,7 +218,8 @@ def assignment_edit(request, pk):
     return render(request, 'assignments/instructor/edit.html', {
         'assignment': assignment,
         'current_questions': current_questions,
-        'available_questions': available_questions[:200],
+        'available_questions': available_questions[:300],
+        'chapters': Chapter.objects.all(),
     })
 
 

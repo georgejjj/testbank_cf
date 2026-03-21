@@ -107,19 +107,57 @@
         <div class="card position-sticky" style="top: 1rem;">
             <div class="card-header"><i class="bi bi-plus-circle me-2"></i>Add Questions</div>
             <div class="card-body">
-                <input type="text" class="form-control form-control-sm mb-2" placeholder="Search available questions..."
+                <!-- Filters -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" id="add-filter-chapter" onchange="filterAddQuestions()">
+                            <option value="">All Chapters</option>
+                            {% for ch in chapters %}
+                            <option value="{{ ch.pk }}">Ch {{ ch.number }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" id="add-filter-difficulty" onchange="filterAddQuestions()">
+                            <option value="">All Difficulty</option>
+                            <option value="1">Easy (1)</option>
+                            <option value="2">Medium (2)</option>
+                            <option value="3">Hard (3)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" id="add-filter-skill" onchange="filterAddQuestions()">
+                            <option value="">All Skills</option>
+                            <option value="Conceptual">Conceptual</option>
+                            <option value="Definition">Definition</option>
+                            <option value="Analytical">Analytical</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" id="add-filter-type" onchange="filterAddQuestions()">
+                            <option value="">All Types</option>
+                            <option value="MC">MC</option>
+                            <option value="NUMERIC">Numeric</option>
+                            <option value="FREE_RESPONSE">Free Response</option>
+                        </select>
+                    </div>
+                </div>
+                <input type="text" class="form-control form-control-sm mb-2" placeholder="Search questions..."
                        id="add-search" onkeyup="filterAddQuestions()">
 
                 <form method="post" id="add-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
 
-                    <div id="add-list" style="max-height: 400px; overflow-y: auto;">
+                    <div id="add-list" style="max-height: 350px; overflow-y: auto;">
                         {% for q in available_questions %}
                         <div class="form-check add-item py-1 border-bottom"
                              data-text="{{ q.text|lower }}"
                              data-chapter="{{ q.section.chapter_id }}"
-                             data-section="{{ q.section.number }}">
+                             data-section="{{ q.section.number }}"
+                             data-difficulty="{{ q.difficulty }}"
+                             data-skill="{{ q.skill }}"
+                             data-type="{{ q.question_type }}">
                             <input type="checkbox" name="add_questions" value="{{ q.id }}"
                                    class="form-check-input add-q-check" id="aq{{ q.id }}">
                             <label class="form-check-label" for="aq{{ q.id }}" style="font-size: 0.82rem;">
@@ -127,14 +165,17 @@
                                 <span class="badge badge-difficulty-{{ q.difficulty }}">D{{ q.difficulty }}</span>
                                 <strong>{{ q.uid }}</strong>
                                 <span class="text-muted">({{ q.section.number }})</span>
-                                — {{ q.text|truncatechars:60 }}
+                                — {{ q.text|truncatechars:55 }}
                             </label>
                         </div>
                         {% endfor %}
                     </div>
 
                     <div class="mt-2 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small"><span id="add-count">0</span> selected</span>
+                        <span class="text-muted small">
+                            <span id="add-visible">{{ available_questions|length }}</span> visible &middot;
+                            <span id="add-count">0</span> selected
+                        </span>
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-plus me-1"></i>Add Selected
                         </button>
@@ -148,10 +189,25 @@
 <script>
 function filterAddQuestions() {
     var search = document.getElementById('add-search').value.toLowerCase();
+    var fChapter = document.getElementById('add-filter-chapter').value;
+    var fDifficulty = document.getElementById('add-filter-difficulty').value;
+    var fSkill = document.getElementById('add-filter-skill').value;
+    var fType = document.getElementById('add-filter-type').value;
+
+    var visible = 0;
     document.querySelectorAll('.add-item').forEach(function(el) {
-        el.style.display = el.dataset.text.includes(search) ? '' : 'none';
+        var show = true;
+        if (search && !el.dataset.text.includes(search)) show = false;
+        if (fChapter && el.dataset.chapter !== fChapter) show = false;
+        if (fDifficulty && el.dataset.difficulty !== fDifficulty) show = false;
+        if (fSkill && el.dataset.skill !== fSkill) show = false;
+        if (fType && el.dataset.type !== fType) show = false;
+        el.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
+    document.getElementById('add-visible').textContent = visible;
 }
+
 document.addEventListener('change', function(e) {
     if (e.target.classList.contains('add-q-check')) {
         document.getElementById('add-count').textContent =
