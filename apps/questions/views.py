@@ -208,13 +208,16 @@ def question_edit(request, pk):
 
 @login_required
 def questions_export(request):
-    """Export all questions as JSON for backup/transfer."""
+    """Export all questions as ZIP (JSON + media images)."""
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
     import json as json_lib
+    import zipfile as zipfile_lib
     from django.http import HttpResponse
 
+    # Build JSON data
+    image_paths = set()
     data = {'chapters': []}
     for chapter in Chapter.objects.prefetch_related('sections__questions__choices', 'sections__questions__context_group').all():
         ch_data = {'number': chapter.number, 'title': chapter.title, 'textbook': chapter.textbook, 'sections': []}
@@ -232,8 +235,12 @@ def questions_export(request):
                     'answer_raw_text': q.answer_raw_text,
                     'image': q.image,
                 }
+                if q.image:
+                    image_paths.add(q.image)
                 if q.context_group:
                     q_data['context'] = {'text': q.context_group.text, 'image': q.context_group.image}
+                    if q.context_group.image:
+                        image_paths.add(q.context_group.image)
                 if q.question_type == 'MC':
                     q_data['choices'] = [{'letter': c.letter, 'text': c.text, 'is_correct': c.is_correct} for c in q.choices.all()]
                 if q.question_type == 'NUMERIC':
@@ -246,27 +253,69 @@ def questions_export(request):
             ch_data['sections'].append(sec_data)
         data['chapters'].append(ch_data)
 
-    response = HttpResponse(json_lib.dumps(data, ensure_ascii=False, indent=2), content_type='application/json')
-    response['Content-Disposition'] = 'attachment; filename="testbank_questions.json"'
+    # Create ZIP in memory
+    zip_path = tempfile.mktemp(suffix='.zip')
+    with zipfile_lib.ZipFile(zip_path, 'w', zipfile_lib.ZIP_DEFLATED) as zf:
+        # Add JSON
+        zf.writestr('questions.json', json_lib.dumps(data, ensure_ascii=False, indent=2))
+        # Add media images
+        media_root = str(settings.MEDIA_ROOT)
+        for img_path in image_paths:
+            full_path = os.path.join(media_root, img_path)
+            if os.path.exists(full_path):
+                zf.write(full_path, os.path.join('media', img_path))
+
+    response = FileResponse(open(zip_path, 'rb'), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="testbank_questions.zip"'
     return response
 
 
 @login_required
 def questions_import_json(request):
-    """Import questions from a previously exported JSON file."""
+    """Import questions from a previously exported ZIP (JSON + media)."""
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
-    if request.method == 'POST' and request.FILES.get('json_file'):
+    if request.method == 'POST' and request.FILES.get('import_file'):
         import json as json_lib
+        import zipfile as zipfile_lib
         from decimal import Decimal
 
+        upload = request.FILES['import_file']
+
+        # Save to temp
+        with tempfile.NamedTemporaryFile(delete=False, suffix=upload.name[-4:]) as tmp:
+            for chunk in upload.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
         try:
-            data = json_lib.loads(request.FILES['json_file'].read().decode('utf-8-sig'))
-        except Exception:
-            messages.error(request, 'Invalid JSON file.')
+            # Handle both ZIP and plain JSON
+            if zipfile_lib.is_zipfile(tmp_path):
+                with zipfile_lib.ZipFile(tmp_path, 'r') as zf:
+                    data = json_lib.loads(zf.read('questions.json').decode('utf-8'))
+                    # Extract media files
+                    media_root = str(settings.MEDIA_ROOT)
+                    for name in zf.namelist():
+                        if name.startswith('media/') and name != 'media/':
+                            # Strip 'media/' prefix to get relative path
+                            rel_path = name[len('media/'):]
+                            dest = os.path.join(media_root, rel_path)
+                            os.makedirs(os.path.dirname(dest), exist_ok=True)
+                            with open(dest, 'wb') as f:
+                                f.write(zf.read(name))
+            else:
+                # Plain JSON fallback
+                with open(tmp_path, 'r', encoding='utf-8-sig') as f:
+                    data = json_lib.loads(f.read())
+        except Exception as e:
+            os.unlink(tmp_path)
+            messages.error(request, f'Failed to read file: {e}')
             return redirect('question_browser')
 
+        os.unlink(tmp_path)
+
+        # Import questions from JSON data
         count = 0
         for ch_data in data.get('chapters', []):
             chapter, _ = Chapter.objects.update_or_create(
@@ -279,14 +328,17 @@ def questions_import_json(request):
                     defaults={'title': sec_data['title'], 'sort_order': sec_data.get('sort_order', 0)},
                 )
                 for q_data in sec_data.get('questions', []):
-                    # Handle context
                     context_group = None
                     if q_data.get('context'):
                         from .models import ContextGroup
-                        context_group, _ = ContextGroup.objects.get_or_create(
-                            text=q_data['context']['text'][:200],
-                            defaults={'text': q_data['context']['text'], 'image': q_data['context'].get('image', ''), 'section': section},
-                        )
+                        ctx_text = q_data['context']['text']
+                        existing = ContextGroup.objects.filter(text__startswith=ctx_text[:80]).first()
+                        if existing:
+                            context_group = existing
+                        else:
+                            context_group = ContextGroup.objects.create(
+                                text=ctx_text, image=q_data['context'].get('image', ''), section=section,
+                            )
 
                     q, created = Question.objects.update_or_create(
                         section=section, question_number=q_data['question_number'],
@@ -314,7 +366,7 @@ def questions_import_json(request):
                         )
                     count += 1
 
-        messages.success(request, f'Imported {count} questions from JSON.')
+        messages.success(request, f'Imported {count} questions with media files.')
         return redirect('question_browser')
 
     return render(request, 'questions/restore.html')

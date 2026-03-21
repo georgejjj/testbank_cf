@@ -12,7 +12,7 @@
             <div class="card-body p-4">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i>
-                    This imports <strong>questions only</strong> (chapters, sections, questions, choices).
+                    This imports <strong>questions and images</strong> (chapters, sections, questions, choices, media).
                     Existing questions with the same number will be updated. No questions will be deleted.
                     Student data and assignments are not affected.
                 </div>
@@ -20,8 +20,8 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">JSON File</label>
-                        <input type="file" name="json_file" class="form-control" accept=".json" required>
+                        <label class="form-label">Questions Backup File (.zip or .json)</label>
+                        <input type="file" name="import_file" class="form-control" accept=".zip,.json" required>
                         <small class="text-muted">Upload a file previously downloaded via "Export Questions"</small>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">
