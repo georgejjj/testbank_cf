@@ -6,17 +6,17 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Grade Free Response</h2>
-  <span class="badge bg-warning text-dark fs-6">{{ ungraded_answers|length }} remaining</span>
+  <span class="badge bg-warning text-dark fs-6">{{ ungraded|length }} remaining</span>
 </div>
 
-{% if not ungraded_answers %}
+{% if not ungraded %}
 <div class="alert alert-success">
   <i class="bi bi-check-circle-fill"></i>
   All free-response answers have been graded. Great work!
 </div>
 {% else %}
 
-{% for answer in ungraded_answers %}
+{% for answer in ungraded %}
 <div class="card shadow-sm mb-4" id="answer-{{ answer.pk }}">
   <div class="card-header d-flex justify-content-between align-items-center">
     <div>

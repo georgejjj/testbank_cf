@@ -316,7 +316,8 @@ def grade_free_response(request):
 
     if request.method == 'POST':
         answer_id = request.POST.get('answer_id')
-        is_correct = request.POST.get('is_correct') == 'true'
+        grade_value = request.POST.get('grade', '')
+        is_correct = grade_value == 'correct'
         feedback = request.POST.get('feedback', '')
 
         answer = get_object_or_404(StudentAnswer, id=answer_id)
