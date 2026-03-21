@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ sa.student }} - {{ sa.assignment.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>{{ sa.student.get_full_name|default:sa.student.username }}</h2>
+    <p class="page-subtitle">
+        {{ sa.assignment.title }} &middot;
+        Score: <strong>{{ sa.score|default:"—" }}/{{ sa.max_score }}</strong> &middot;
+        Status: {{ sa.get_status_display }}
+    </p>
+</div>
+
+<a href="{% url 'assignment_detail' sa.assignment.pk %}" class="btn btn-outline-secondary btn-sm mb-3">
+    <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+</a>
+
+{% for r in results %}
+<div class="card mb-3 fade-in">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <strong>{{ r.answer.question.uid }}</strong>
+            <span class="badge badge-type ms-1">{{ r.answer.question.get_question_type_display }}</span>
+            <span class="badge badge-difficulty-{{ r.answer.question.difficulty }} ms-1">D{{ r.answer.question.difficulty }}</span>
+        </span>
+        {% if r.answer.is_correct %}
+        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Correct</span>
+        {% elif r.answer.is_correct is False %}
+        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Incorrect</span>
+        {% else %}
+        <span class="badge bg-secondary">Pending</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <p class="question-text">{{ r.answer.question.text }}</p>
+
+        {% if r.answer.question.question_type == 'MC' %}
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted d-block mb-1">Student's Answer:</small>
+                    {% if r.answer.selected_choice %}
+                    <div class="choice-option {% if r.answer.is_correct %}correct{% else %}incorrect{% endif %}" style="cursor:default;">
+                        <strong>{{ r.answer.selected_choice.letter }})</strong> {{ r.answer.selected_choice.text }}
+                    </div>
+                    {% else %}
+                    <span class="text-muted">No answer</span>
+                    {% endif %}
+                </div>
+                {% if r.correct_choice and not r.answer.is_correct %}
+                <div class="col-md-6">
+                    <small class="text-muted d-block mb-1">Correct Answer:</small>
+                    <div class="choice-option correct" style="cursor:default;">
+                        <strong>{{ r.correct_choice.letter }})</strong> {{ r.correct_choice.text }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        {% elif r.answer.question.question_type == 'NUMERIC' %}
+            <p><strong>Student's Answer:</strong> {{ r.answer.numeric_answer|default:"No answer" }}</p>
+            {% if r.answer.question.answer_raw_text %}
+            <p class="text-muted"><strong>Expected:</strong> {{ r.answer.question.answer_raw_text }}</p>
+            {% endif %}
+        {% else %}
+            <p><strong>Student's Answer:</strong></p>
+            <div class="border rounded p-2 bg-light">{{ r.answer.text_answer|default:"No answer"|linebreaksbr }}</div>
+            {% if r.answer.question.answer_raw_text %}
+            <p class="text-muted mt-2"><strong>Expected:</strong> {{ r.answer.question.answer_raw_text|truncatechars:200 }}</p>
+            {% endif %}
+        {% endif %}
+
+        {% if r.answer.question.explanation %}
+        <div class="context-block mt-3">
+            <div class="context-label">Explanation</div>
+            {{ r.answer.question.explanation }}
+        </div>
+        {% endif %}
+
+        {% if r.answer.instructor_feedback %}
+        <div class="alert alert-info mt-2">
+            <strong>Your Feedback:</strong> {{ r.answer.instructor_feedback }}
+        </div>
+        {% endif %}
+
+        <div class="text-muted small mt-2">
+            <i class="bi bi-clock me-1"></i>Time: {{ r.answer.server_elapsed_seconds }}s
+        </div>
+    </div>
+</div>
+{% empty %}
+<p class="text-muted">No answers submitted yet.</p>
+{% endfor %}
+{% endblock %}

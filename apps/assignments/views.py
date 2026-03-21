@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -157,6 +157,33 @@ def assignment_detail(request, pk):
     return render(request, 'assignments/instructor/detail.html', {
         'assignment': assignment,
         'student_assignments': student_assignments,
+    })
+
+
+@login_required
+def student_detail(request, sa_pk):
+    """Instructor view: see a specific student's answers for an assignment."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    sa = get_object_or_404(StudentAssignment, pk=sa_pk)
+    answers = sa.answers.select_related(
+        'question', 'selected_choice'
+    ).order_by('question__global_number')
+
+    results = []
+    for ans in answers:
+        correct_choice = None
+        if ans.question.question_type == 'MC':
+            correct_choice = ans.question.choices.filter(is_correct=True).first()
+        results.append({
+            'answer': ans,
+            'correct_choice': correct_choice,
+        })
+
+    return render(request, 'assignments/instructor/student_detail.html', {
+        'sa': sa,
+        'results': results,
     })
 
 
@@ -356,6 +383,10 @@ def submit_answer(request, sa_pk):
         MistakeEntry.objects.get_or_create(student=request.user, question=question)
 
     recompute_score(sa)
+
+    # AJAX request (from MC fetch) — return JSON instead of redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok', 'is_correct': answer.is_correct})
 
     return redirect(f'/assignments/take/{sa.pk}/?q={question_idx}')
 

@@ -1,114 +1,68 @@
 {% extends "base.html" %}
 
 {% block title %}{{ assignment.title }} - TestBank{% endblock %}
-{% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>{{ assignment.title }}</h2>
-  <div>
-    <form method="post" action="{% url 'assignment_publish' assignment.pk %}" class="d-inline">
-      {% csrf_token %}
-      {% if assignment.is_published %}
-      <button type="submit" class="btn btn-outline-secondary">
-        <i class="bi bi-eye-slash"></i> Unpublish
-      </button>
-      {% else %}
-      <button type="submit" class="btn btn-success">
-        <i class="bi bi-eye"></i> Publish
-      </button>
-      {% endif %}
+<div class="page-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2>{{ assignment.title }}</h2>
+        <p class="page-subtitle">{{ assignment.get_mode_display }} &middot; {{ assignment.num_questions }} questions</p>
+    </div>
+    <form method="post" action="{% url 'assignment_publish' assignment.pk %}">
+        {% csrf_token %}
+        <button class="btn {% if assignment.is_published %}btn-outline-secondary{% else %}btn-gold{% endif %} btn-sm">
+            {% if assignment.is_published %}Unpublish{% else %}Publish{% endif %}
+        </button>
     </form>
-  </div>
-</div>
-
-<!-- Assignment Info -->
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-3">
-        <strong>Mode:</strong>
-        <span class="badge bg-{% if assignment.mode == 'ASSIGNMENT' %}primary{% else %}secondary{% endif %}">
-          {{ assignment.get_mode_display }}
-        </span>
-      </div>
-      <div class="col-md-3">
-        <strong>Questions:</strong> {{ assignment.num_questions }}
-      </div>
-      <div class="col-md-3">
-        <strong>Due:</strong>
-        {% if assignment.due_date %}
-          {{ assignment.due_date|date:"M d, Y g:i A" }}
-        {% else %}
-          No due date
-        {% endif %}
-      </div>
-      <div class="col-md-3">
-        <strong>Randomized:</strong>
-        {% if assignment.is_randomized %}Yes{% else %}No{% endif %}
-      </div>
-    </div>
-    {% if assignment.time_limit_minutes %}
-    <div class="mt-2">
-      <strong>Time Limit:</strong> {{ assignment.time_limit_minutes }} minutes
-    </div>
-    {% endif %}
-  </div>
 </div>
 
 <!-- Student Results Table -->
-<div class="card shadow-sm">
-  <div class="card-header">
-    <h5 class="mb-0">Student Results</h5>
-  </div>
-  <div class="card-body p-0">
+<div class="card">
+    <div class="card-header"><i class="bi bi-people me-2"></i>Student Results</div>
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Student</th>
-            <th>Status</th>
-            <th>Score</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for sa in student_assignments %}
-          <tr>
-            <td>{{ sa.student.get_full_name|default:sa.student.username }}</td>
-            <td>
-              <span class="badge bg-{% if sa.status == 'COMPLETED' %}success{% elif sa.status == 'IN_PROGRESS' %}warning text-dark{% else %}secondary{% endif %}">
-                {{ sa.get_status_display }}
-              </span>
-            </td>
-            <td>
-              {% if sa.score is not None and sa.max_score %}
-                {{ sa.score }}/{{ sa.max_score }}
-                <small class="text-muted">
-                  ({% widthratio sa.score sa.max_score 100 %}%)
-                </small>
-              {% else %}
-                &mdash;
-              {% endif %}
-            </td>
-            <td>
-              {% if sa.started_at and sa.completed_at %}
-                {{ sa.time_display }}
-              {% else %}
-                &mdash;
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="text-center text-muted py-4">
-              No students have been assigned yet.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th class="text-end">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for sa in student_assignments %}
+            <tr>
+                <td class="fw-semibold">{{ sa.student.get_full_name|default:sa.student.username }}</td>
+                <td>
+                    <span class="badge bg-{% if sa.status == 'COMPLETED' %}success{% elif sa.status == 'IN_PROGRESS' %}warning text-dark{% else %}secondary{% endif %}">
+                        {{ sa.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    {% if sa.score is not None %}
+                    <span class="score-display">
+                        <span class="score-value" style="font-size:1rem;">{{ sa.score }}</span>
+                        <span class="score-max">/{{ sa.max_score }}</span>
+                    </span>
+                    {% else %}&mdash;{% endif %}
+                </td>
+                <td>{% if sa.started_at %}{{ sa.started_at|date:"M d, g:i A" }}{% else %}&mdash;{% endif %}</td>
+                <td>{% if sa.completed_at %}{{ sa.completed_at|date:"M d, g:i A" }}{% else %}&mdash;{% endif %}</td>
+                <td class="text-end">
+                    {% if sa.status != 'NOT_STARTED' %}
+                    <a href="{% url 'student_detail' sa.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-eye me-1"></i>View Answers
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No students assigned yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
-  </div>
 </div>
 {% endblock %}

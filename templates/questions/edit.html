@@ -108,10 +108,10 @@
                     <img src="{{ MEDIA_URL }}{{ question.image }}" class="img-fluid rounded mb-3">
                     {% endif %}
 
-                    {% if question.context_group %}
-                    <h6>Context Group</h6>
-                    <div class="small text-muted">{{ question.context_group.text|truncatewords:30|safe }}</div>
-                    {% endif %}
+                    <h6 class="mt-3">Context / Reference Info</h6>
+                    <textarea name="context_text" class="form-control form-control-sm mb-2" rows="4"
+                              placeholder="Shared context shown above this question (leave empty to remove)">{% if question.context_group %}{{ question.context_group.text }}{% endif %}</textarea>
+                    <small class="text-muted">Edit or clear the reference information shown to students</small>
                 </div>
             </div>
 

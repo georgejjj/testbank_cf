@@ -38,25 +38,19 @@
 
         {% if question.question_type == 'MC' %}
             {% for choice in choices %}
-            <form method="post" action="{% url 'submit_answer' sa.pk %}" class="mc-form">
-                {% csrf_token %}
-                <input type="hidden" name="question_id" value="{{ question.id }}">
-                <input type="hidden" name="question_idx" value="{{ question_idx }}">
-                <input type="hidden" name="time_spent" value="0" class="time-spent-field">
-                <input type="hidden" name="choice_id" value="{{ choice.id }}">
-                <div class="choice-option {% if existing_answer and existing_answer.selected_choice_id == choice.id %}selected{% endif %}"
-                     onclick="submitMC(this);">
-                    <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.display_letter }})</strong>
-                    {{ choice.text }}
-                </div>
-            </form>
+            <div class="choice-option {% if existing_answer and existing_answer.selected_choice_id == choice.id %}selected{% endif %}"
+                 data-choice-id="{{ choice.id }}"
+                 onclick="selectMC(this, {{ choice.id }});">
+                <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.display_letter }})</strong>
+                {{ choice.text }}
+            </div>
             {% endfor %}
 
-            {% if existing_answer %}
-            <div class="mt-2" style="color: var(--success); font-size: 0.85rem;">
-                <i class="bi bi-check-circle-fill me-1"></i>Answer saved
+            <div class="mt-2 mc-status" style="font-size: 0.85rem;">
+                {% if existing_answer %}
+                <span style="color: var(--success);"><i class="bi bi-check-circle-fill me-1"></i>Answer saved</span>
+                {% endif %}
             </div>
-            {% endif %}
 
         {% elif question.question_type == 'NUMERIC' %}
             <form method="post" action="{% url 'submit_answer' sa.pk %}" id="answer-form">
@@ -126,11 +120,49 @@
 </div>
 
 <script>
-function submitMC(el) {
-    document.querySelectorAll('.choice-option').forEach(e => e.classList.remove('selected'));
+function selectMC(el, choiceId) {
+    // Instant visual feedback
+    document.querySelectorAll('.choice-option').forEach(function(e) { e.classList.remove('selected'); });
     el.classList.add('selected');
-    el.closest('form').querySelector('.time-spent-field').value =
-        (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0;
-    setTimeout(() => el.closest('form').submit(), 200);
+
+    // Show saving status
+    var statusEl = document.querySelector('.mc-status');
+    statusEl.innerHTML = '<span style="color: var(--text-muted);"><i class="bi bi-hourglass-split me-1"></i>Saving...</span>';
+
+    // Submit via fetch (no page reload)
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) csrfToken = '{{ csrf_token }}';
+    else csrfToken = csrfToken.value;
+
+    var formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    formData.append('question_id', '{{ question.id }}');
+    formData.append('question_idx', '{{ question_idx }}');
+    formData.append('choice_id', choiceId);
+    formData.append('time_spent', (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0);
+
+    fetch('{% url "submit_answer" sa.pk %}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function(response) {
+        if (response.ok || response.redirected) {
+            statusEl.innerHTML = '<span style="color: var(--success);"><i class="bi bi-check-circle-fill me-1"></i>Answer saved</span>';
+            // Update the nav button to show answered
+            var navBtns = document.querySelectorAll('.question-nav-btn');
+            if (navBtns[{{ question_idx }}]) navBtns[{{ question_idx }}].classList.add('answered');
+            // Update progress bar
+            var bar = document.querySelector('.progress-bar');
+            if (bar) {
+                var answered = document.querySelectorAll('.question-nav-btn.answered').length;
+                var total = {{ total_questions }};
+                bar.style.width = Math.round(answered / total * 100) + '%';
+            }
+        } else {
+            statusEl.innerHTML = '<span style="color: var(--danger);"><i class="bi bi-exclamation-circle me-1"></i>Error saving</span>';
+        }
+    }).catch(function() {
+        statusEl.innerHTML = '<span style="color: var(--danger);"><i class="bi bi-exclamation-circle me-1"></i>Network error</span>';
+    });
 }
 </script>

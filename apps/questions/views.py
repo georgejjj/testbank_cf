@@ -150,6 +150,20 @@ def question_edit(request, pk):
         question.skill = request.POST.get('skill', question.skill)
         question.explanation = request.POST.get('explanation', '')
         question.answer_raw_text = request.POST.get('answer_raw_text', '')
+
+        # Handle context group
+        context_text = request.POST.get('context_text', '').strip()
+        if context_text:
+            from .models import ContextGroup
+            if question.context_group:
+                question.context_group.text = context_text
+                question.context_group.save()
+            else:
+                cg = ContextGroup.objects.create(text=context_text, section=question.section)
+                question.context_group = cg
+        else:
+            question.context_group = None
+
         question.save()
 
         if question.question_type == 'MC':
