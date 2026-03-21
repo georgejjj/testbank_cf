@@ -110,7 +110,10 @@
                                 {% endfor %}
                             </div>
                             <div class="mt-2 d-flex justify-content-between">
-                                <span class="text-muted small"><span id="handpick-count">0</span> questions selected</span>
+                                <span class="text-muted small">
+                                    <span id="handpick-visible">{{ all_questions|length }}</span> visible &middot;
+                                    <span id="handpick-count">0</span> selected
+                                </span>
                                 <button type="button" class="btn btn-link btn-sm p-0" onclick="clearHandpick()">Clear selection</button>
                             </div>
                         </div>
@@ -159,15 +162,15 @@
                     <label class="form-label">Difficulty</label>
                     <div class="mb-3">
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="difficulty_checks" value="1" class="form-check-input" id="dc1">
+                            <input type="checkbox" name="difficulty_checks" value="1" class="form-check-input filter-check" id="dc1" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="dc1"><span class="badge badge-difficulty-1">Easy</span></label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="difficulty_checks" value="2" class="form-check-input" id="dc2">
+                            <input type="checkbox" name="difficulty_checks" value="2" class="form-check-input filter-check" id="dc2" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="dc2"><span class="badge badge-difficulty-2">Medium</span></label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="difficulty_checks" value="3" class="form-check-input" id="dc3">
+                            <input type="checkbox" name="difficulty_checks" value="3" class="form-check-input filter-check" id="dc3" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="dc3"><span class="badge badge-difficulty-3">Hard</span></label>
                         </div>
                     </div>
@@ -175,15 +178,15 @@
                     <label class="form-label">Skill</label>
                     <div class="mb-3">
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="skill_checks" value="Conceptual" class="form-check-input" id="sc1">
+                            <input type="checkbox" name="skill_checks" value="Conceptual" class="form-check-input filter-check" id="sc1" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="sc1">Conceptual</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="skill_checks" value="Definition" class="form-check-input" id="sc2">
+                            <input type="checkbox" name="skill_checks" value="Definition" class="form-check-input filter-check" id="sc2" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="sc2">Definition</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="skill_checks" value="Analytical" class="form-check-input" id="sc3">
+                            <input type="checkbox" name="skill_checks" value="Analytical" class="form-check-input filter-check" id="sc3" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="sc3">Analytical</label>
                         </div>
                     </div>
@@ -191,15 +194,15 @@
                     <label class="form-label">Question Type</label>
                     <div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="type_checks" value="MC" class="form-check-input" id="tc1">
+                            <input type="checkbox" name="type_checks" value="MC" class="form-check-input filter-check" id="tc1" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="tc1">MC</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="type_checks" value="NUMERIC" class="form-check-input" id="tc2">
+                            <input type="checkbox" name="type_checks" value="NUMERIC" class="form-check-input filter-check" id="tc2" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="tc2">Numeric</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input type="checkbox" name="type_checks" value="FREE_RESPONSE" class="form-check-input" id="tc3">
+                            <input type="checkbox" name="type_checks" value="FREE_RESPONSE" class="form-check-input filter-check" id="tc3" onchange="filterHandpickQuestions()">
                             <label class="form-check-label" for="tc3">Free Response</label>
                         </div>
                     </div>
@@ -229,6 +232,8 @@ function toggleChapterSections(checkbox) {
 
 function filterHandpickQuestions() {
     var search = document.getElementById('handpick-search').value.toLowerCase();
+
+    // Collect all active filters
     var selectedChapters = new Set();
     document.querySelectorAll('.chapter-check:checked').forEach(function(el) {
         selectedChapters.add(el.dataset.chapter);
@@ -237,14 +242,35 @@ function filterHandpickQuestions() {
     document.querySelectorAll('.section-check:checked').forEach(function(el) {
         selectedSections.add(el.dataset.section);
     });
+    var selectedDifficulty = new Set();
+    document.querySelectorAll('[name="difficulty_checks"]:checked').forEach(function(el) {
+        selectedDifficulty.add(el.value);
+    });
+    var selectedSkill = new Set();
+    document.querySelectorAll('[name="skill_checks"]:checked').forEach(function(el) {
+        selectedSkill.add(el.value);
+    });
+    var selectedType = new Set();
+    document.querySelectorAll('[name="type_checks"]:checked').forEach(function(el) {
+        selectedType.add(el.value);
+    });
 
+    var visibleCount = 0;
     document.querySelectorAll('.handpick-item').forEach(function(el) {
         var show = true;
         if (search && !el.dataset.text.includes(search)) show = false;
         if (show && selectedChapters.size > 0 && !selectedChapters.has(el.dataset.chapter)) show = false;
         if (show && selectedSections.size > 0 && !selectedSections.has(el.dataset.section)) show = false;
+        if (show && selectedDifficulty.size > 0 && !selectedDifficulty.has(el.dataset.difficulty)) show = false;
+        if (show && selectedSkill.size > 0 && !selectedSkill.has(el.dataset.skill)) show = false;
+        if (show && selectedType.size > 0 && !selectedType.has(el.dataset.type)) show = false;
         el.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
     });
+
+    // Update visible count
+    var countEl = document.getElementById('handpick-visible');
+    if (countEl) countEl.textContent = visibleCount;
 }
 
 function sortHandpick(field, btn) {
