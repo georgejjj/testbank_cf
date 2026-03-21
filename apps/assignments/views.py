@@ -118,14 +118,107 @@ def assignment_create(request):
             assignment.num_questions = len(manual_ids)
             assignment.save()
 
+        # For auto-generate (no manual picks), pre-draw questions so instructor can review/edit
+        if not manual_ids:
+            from services.randomizer import _build_question_pool
+            import random
+            pool = _build_question_pool(assignment)
+            num = min(assignment.num_questions, len(pool))
+            drawn = random.sample(pool, num) if num > 0 else []
+            assignment.manually_selected_questions.set(drawn)
+            assignment.num_questions = len(drawn)
+            assignment.save()
+            messages.success(request, f'Assignment "{assignment.title}" created with {len(drawn)} questions. Review and edit before publishing.')
+            return redirect('assignment_edit', pk=assignment.pk)
+
         messages.success(request, f'Assignment "{assignment.title}" created.')
-        return redirect('instructor_dashboard')
+        return redirect('assignment_edit', pk=assignment.pk)
 
     chapters = Chapter.objects.prefetch_related('sections')
     all_questions = Question.objects.select_related('section__chapter').order_by('section__chapter__number', 'question_number')[:500]
     return render(request, 'assignments/instructor/create.html', {
         'chapters': chapters,
         'all_questions': all_questions,
+    })
+
+
+@login_required
+def assignment_edit(request, pk):
+    """Edit assignment questions before publishing — add, remove, replace."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    assignment = get_object_or_404(Assignment, pk=pk, created_by=request.user)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'remove':
+            q_id = request.POST.get('question_id')
+            assignment.manually_selected_questions.remove(q_id)
+            assignment.num_questions = assignment.manually_selected_questions.count()
+            assignment.save()
+            messages.success(request, 'Question removed.')
+
+        elif action == 'add':
+            q_ids = request.POST.getlist('add_questions')
+            for qid in q_ids:
+                assignment.manually_selected_questions.add(qid)
+            assignment.num_questions = assignment.manually_selected_questions.count()
+            assignment.save()
+            if q_ids:
+                messages.success(request, f'Added {len(q_ids)} question(s).')
+
+        elif action == 'replace':
+            old_id = request.POST.get('old_question_id')
+            new_id = request.POST.get('new_question_id')
+            if old_id and new_id and old_id != new_id:
+                assignment.manually_selected_questions.remove(old_id)
+                assignment.manually_selected_questions.add(new_id)
+                messages.success(request, 'Question replaced.')
+
+        elif action == 'update_details':
+            assignment.title = request.POST.get('title', assignment.title)
+            assignment.mode = request.POST.get('mode', assignment.mode)
+            due_date = request.POST.get('due_date')
+            assignment.due_date = due_date or None
+            assignment.is_randomized = request.POST.get('is_randomized') == 'on'
+            assignment.save()
+            messages.success(request, 'Assignment details updated.')
+
+        elif action == 'regenerate':
+            # Re-draw from the same filters
+            from services.randomizer import _build_question_pool
+            import random
+            pool = _build_question_pool(assignment)
+            num = min(assignment.num_questions or 10, len(pool))
+            drawn = random.sample(pool, num) if num > 0 else []
+            assignment.manually_selected_questions.set(drawn)
+            assignment.num_questions = len(drawn)
+            assignment.save()
+            messages.success(request, f'Regenerated {len(drawn)} questions.')
+
+        return redirect('assignment_edit', pk=assignment.pk)
+
+    current_questions = assignment.manually_selected_questions.select_related(
+        'section__chapter'
+    ).prefetch_related('choices').order_by('section__chapter__number', 'global_number')
+
+    # Available questions for adding (exclude already selected)
+    selected_ids = set(current_questions.values_list('id', flat=True))
+    available_questions = Question.objects.select_related(
+        'section__chapter'
+    ).exclude(id__in=selected_ids).order_by('section__chapter__number', 'global_number')
+
+    # Apply chapter filter if the assignment has chapters set
+    assigned_chapters = assignment.chapters.all()
+    if assigned_chapters.exists():
+        available_questions = available_questions.filter(section__chapter__in=assigned_chapters)
+
+    return render(request, 'assignments/instructor/edit.html', {
+        'assignment': assignment,
+        'current_questions': current_questions,
+        'available_questions': available_questions[:200],
     })
 
 

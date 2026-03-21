@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Edit: {{ assignment.title }} - TestBank{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2>Edit Assignment</h2>
+        <p class="page-subtitle">Review and adjust questions before publishing</p>
+    </div>
+    <div>
+        <form method="post" action="{% url 'assignment_publish' assignment.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button class="btn btn-gold">
+                <i class="bi bi-send me-1"></i>Publish
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Current Questions -->
+    <div class="col-lg-7">
+        <!-- Assignment Details (collapsible) -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 data-bs-toggle="collapse" data-bs-target="#detailsCollapse" style="cursor:pointer;">
+                <span><i class="bi bi-gear me-2"></i>{{ assignment.title }} &middot; {{ assignment.get_mode_display }} &middot; {{ current_questions.count }} questions</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="detailsCollapse">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_details">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Title</label>
+                                <input type="text" name="title" class="form-control form-control-sm" value="{{ assignment.title }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mode</label>
+                                <select name="mode" class="form-select form-select-sm">
+                                    <option value="ASSIGNMENT" {% if assignment.mode == 'ASSIGNMENT' %}selected{% endif %}>Assignment</option>
+                                    <option value="PRACTICE" {% if assignment.mode == 'PRACTICE' %}selected{% endif %}>Practice</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Due Date</label>
+                                <input type="datetime-local" name="due_date" class="form-control form-control-sm"
+                                       value="{{ assignment.due_date|date:'Y-m-d\TH:i'|default:'' }}">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Save</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Questions List -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 style="font-family: var(--font-display); margin:0;">
+                <i class="bi bi-list-check me-2" style="color: var(--gold);"></i>Current Questions ({{ current_questions.count }})
+            </h5>
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="regenerate">
+                <button type="submit" class="btn btn-outline-secondary btn-sm"
+                        onclick="return confirm('Re-draw all questions? Current selection will be replaced.')">
+                    <i class="bi bi-shuffle me-1"></i>Regenerate
+                </button>
+            </form>
+        </div>
+
+        {% for q in current_questions %}
+        <div class="card mb-2 fade-in">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div style="flex: 1; min-width: 0;">
+                        <span class="badge bg-secondary me-1">{{ q.uid }}</span>
+                        <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
+                        <span class="badge badge-difficulty-{{ q.difficulty }}">D{{ q.difficulty }}</span>
+                        <span class="text-muted small ms-1">({{ q.section.number }})</span>
+                        <p class="mb-0 mt-1" style="font-size: 0.88rem;">{{ q.text|truncatechars:120 }}</p>
+                    </div>
+                    <form method="post" class="ms-2 flex-shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="question_id" value="{{ q.id }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Remove this question?')">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4">
+            <p>No questions yet. Add questions from the panel on the right.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Right: Add Questions -->
+    <div class="col-lg-5">
+        <div class="card position-sticky" style="top: 1rem;">
+            <div class="card-header"><i class="bi bi-plus-circle me-2"></i>Add Questions</div>
+            <div class="card-body">
+                <input type="text" class="form-control form-control-sm mb-2" placeholder="Search available questions..."
+                       id="add-search" onkeyup="filterAddQuestions()">
+
+                <form method="post" id="add-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+
+                    <div id="add-list" style="max-height: 400px; overflow-y: auto;">
+                        {% for q in available_questions %}
+                        <div class="form-check add-item py-1 border-bottom"
+                             data-text="{{ q.text|lower }}"
+                             data-chapter="{{ q.section.chapter_id }}"
+                             data-section="{{ q.section.number }}">
+                            <input type="checkbox" name="add_questions" value="{{ q.id }}"
+                                   class="form-check-input add-q-check" id="aq{{ q.id }}">
+                            <label class="form-check-label" for="aq{{ q.id }}" style="font-size: 0.82rem;">
+                                <span class="badge badge-type me-1">{{ q.get_question_type_display }}</span>
+                                <span class="badge badge-difficulty-{{ q.difficulty }}">D{{ q.difficulty }}</span>
+                                <strong>{{ q.uid }}</strong>
+                                <span class="text-muted">({{ q.section.number }})</span>
+                                — {{ q.text|truncatechars:60 }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small"><span id="add-count">0</span> selected</span>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus me-1"></i>Add Selected
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterAddQuestions() {
+    var search = document.getElementById('add-search').value.toLowerCase();
+    document.querySelectorAll('.add-item').forEach(function(el) {
+        el.style.display = el.dataset.text.includes(search) ? '' : 'none';
+    });
+}
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('add-q-check')) {
+        document.getElementById('add-count').textContent =
+            document.querySelectorAll('.add-q-check:checked').length;
+    }
+});
+</script>
+{% endblock %}

@@ -52,6 +52,12 @@
                     {% else %}&mdash;{% endif %}
                 </td>
                 <td class="text-end">
+                    {% if not a.is_published %}
+                    <a href="{% url 'assignment_edit' a.pk %}" class="btn btn-sm btn-outline-secondary me-1"
+                       title="Edit questions in this assignment">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
+                    {% endif %}
                     <a href="{% url 'assignment_preview' a.pk %}" class="btn btn-sm btn-outline-secondary me-1"
                        title="Take this assignment yourself to test it">
                         <i class="bi bi-play-circle me-1"></i>Preview
