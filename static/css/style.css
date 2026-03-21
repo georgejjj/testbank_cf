@@ -318,6 +318,32 @@ a:hover { color: var(--gold); }
 }
 
 /* ==========================================================================
+   PAGINATION
+   ========================================================================== */
+.pagination .page-link {
+  min-width: 36px;
+  text-align: center;
+  padding: 0.35rem 0.6rem;
+  margin: 0 2px;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.85rem;
+  color: var(--navy);
+  border-color: var(--warm-border);
+}
+.pagination .page-item.active .page-link {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.pagination .page-link:hover {
+  background: var(--warm-bg);
+  border-color: var(--navy-fade);
+}
+.pagination .page-item.disabled .page-link {
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
    TABLES
    ========================================================================== */
 .table {
