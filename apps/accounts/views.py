@@ -67,7 +67,7 @@ def student_roster(request):
             user_id = request.POST.get('user_id')
             try:
                 student = User.objects.get(id=user_id, role='STUDENT')
-                new_pw = f'{student.student_id}@Cf'
+                new_pw = student.username
                 student.set_password(new_pw)
                 student.must_change_password = True
                 student.save()
@@ -97,8 +97,7 @@ def _import_students_csv(csv_file):
         if User.objects.filter(username=username).exists():
             continue
 
-        sid = row.get('student_id', '').strip()
-        password = f'{sid}@Cf' if sid else f'{username}@Cf'
+        password = username
         user = User.objects.create_user(
             username=username,
             password=password,
