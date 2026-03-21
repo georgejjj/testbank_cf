@@ -68,6 +68,13 @@
                             {% if a.is_published %}Unpublish{% else %}Publish{% endif %}
                         </button>
                     </form>
+                    <form method="post" action="{% url 'assignment_delete' a.pk %}" class="d-inline ms-1">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete \'{{ a.title }}\'? All student submissions for this assignment will also be deleted.')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
                 </td>
             </tr>
             {% empty %}

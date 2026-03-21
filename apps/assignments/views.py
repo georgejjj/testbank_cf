@@ -224,6 +224,17 @@ def assignment_edit(request, pk):
 
 
 @login_required
+def assignment_delete(request, pk):
+    if not request.user.is_instructor or request.method != 'POST':
+        return redirect('instructor_dashboard')
+    assignment = get_object_or_404(Assignment, pk=pk, created_by=request.user)
+    title = assignment.title
+    assignment.delete()
+    messages.success(request, f'Assignment "{title}" deleted.')
+    return redirect('instructor_dashboard')
+
+
+@login_required
 def assignment_publish(request, pk):
     if not request.user.is_instructor:
         return redirect('student_dashboard')
