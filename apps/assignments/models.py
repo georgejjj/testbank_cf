@@ -45,6 +45,7 @@ class StudentAssignment(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     score = models.IntegerField(null=True, blank=True)
     max_score = models.IntegerField(default=0)
+    total_time_seconds = models.IntegerField(default=0)  # Accumulated time across all sessions
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='NOT_STARTED')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

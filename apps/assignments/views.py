@@ -447,6 +447,7 @@ def take_assignment(request, sa_pk):
         'answered_ids': answered_ids,
         'questions': questions,
         'is_practice': sa.assignment.mode == 'PRACTICE',
+        'accumulated_seconds': sa.total_time_seconds,
     }
 
     if request.headers.get('HX-Request'):
@@ -468,6 +469,12 @@ def submit_answer(request, sa_pk):
     question = get_object_or_404(Question, id=question_id)
     time_spent = int(request.POST.get('time_spent', 0))
     question_idx = request.POST.get('question_idx', 0)
+
+    # Update accumulated time from client
+    accumulated = int(request.POST.get('accumulated_time', 0))
+    if accumulated > sa.total_time_seconds:
+        sa.total_time_seconds = accumulated
+        sa.save(update_fields=['total_time_seconds'])
 
     # Compute server elapsed
     last_answer = sa.answers.order_by('-answered_at').first()
@@ -499,10 +506,6 @@ def submit_answer(request, sa_pk):
 
     grade_answer(answer)
     answer.save()
-
-    if answer.is_correct is False:
-        MistakeEntry.objects.get_or_create(student=request.user, question=question)
-
     recompute_score(sa)
 
     # AJAX request (from MC fetch) — return JSON instead of redirect
@@ -522,6 +525,11 @@ def complete_assignment(request, sa_pk):
     sa.completed_at = timezone.now()
     sa.save(update_fields=['status', 'completed_at'])
     recompute_score(sa)
+
+    # Add wrong answers to mistake collection now that assignment is submitted
+    wrong_answers = sa.answers.filter(is_correct=False)
+    for ans in wrong_answers:
+        MistakeEntry.objects.get_or_create(student=request.user, question=ans.question)
 
     return redirect('assignment_result', sa_pk=sa.pk)
 

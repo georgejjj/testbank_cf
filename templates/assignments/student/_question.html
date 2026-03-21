@@ -58,6 +58,7 @@
                 <input type="hidden" name="question_id" value="{{ question.id }}">
                 <input type="hidden" name="question_idx" value="{{ question_idx }}">
                 <input type="hidden" name="time_spent" id="time-spent-input" value="0">
+                <input type="hidden" name="accumulated_time" id="accumulated-time-input" value="0">
                 <div class="mb-3">
                     <label class="form-label">Your answer:</label>
                     <input type="text" name="numeric_answer" class="form-control" style="max-width: 300px;"
@@ -65,7 +66,7 @@
                            value="{{ existing_answer.numeric_answer|default:'' }}">
                 </div>
                 <button type="submit" class="btn btn-primary"
-                        onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
+                        onclick="var e=getElapsedSeconds(); document.getElementById('time-spent-input').value=e; document.getElementById('accumulated-time-input').value=e;">
                     <i class="bi bi-check2 me-1"></i>Save Answer
                 </button>
             </form>
@@ -76,6 +77,7 @@
                 <input type="hidden" name="question_id" value="{{ question.id }}">
                 <input type="hidden" name="question_idx" value="{{ question_idx }}">
                 <input type="hidden" name="time_spent" id="time-spent-input" value="0">
+                <input type="hidden" name="accumulated_time" id="accumulated-time-input" value="0">
                 <div class="mb-3">
                     <label class="form-label">Your answer:</label>
                     <textarea name="text_answer" class="form-control" rows="5"
@@ -83,7 +85,7 @@
                     <small class="text-muted">Max 5,000 characters</small>
                 </div>
                 <button type="submit" class="btn btn-primary"
-                        onclick="document.getElementById('time-spent-input').value = getElapsedSeconds();">
+                        onclick="var e=getElapsedSeconds(); document.getElementById('time-spent-input').value=e; document.getElementById('accumulated-time-input').value=e;">
                     <i class="bi bi-check2 me-1"></i>Save Answer
                 </button>
             </form>
@@ -139,7 +141,9 @@ function selectMC(el, choiceId) {
     formData.append('question_id', '{{ question.id }}');
     formData.append('question_idx', '{{ question_idx }}');
     formData.append('choice_id', choiceId);
-    formData.append('time_spent', (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0);
+    var elapsed = (typeof getElapsedSeconds === 'function') ? getElapsedSeconds() : 0;
+    formData.append('time_spent', elapsed);
+    formData.append('accumulated_time', elapsed);
 
     fetch('{% url "submit_answer" sa.pk %}', {
         method: 'POST',
