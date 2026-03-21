@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -23,11 +24,9 @@ sys.path.insert(0, str(BASE_DIR / 'apps'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1x)&o_x16r-m8=exz+o3tjnog3t*)vo1!_#gm9=-91-n$i9*zm'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Read SECRET_KEY and DEBUG from environment, with safe defaults for development
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-only-insecure-key-change-in-production')
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ['testbank.fin-tech.fun', 'localhost', '127.0.0.1']
 

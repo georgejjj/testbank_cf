@@ -14,6 +14,7 @@ ExecStart=/usr/local/bin/gunicorn config.wsgi:application -c deploy/gunicorn.con
 Restart=always
 RestartSec=3
 Environment="DJANGO_SETTINGS_MODULE=config.settings"
+EnvironmentFile=/home/georgejjj/testbank/.env
 
 [Install]
 WantedBy=multi-user.target
