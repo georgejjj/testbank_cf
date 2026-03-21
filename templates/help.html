@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}Help & Instructions - TestBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Help & Instructions</h2>
+    <p class="page-subtitle">How to use the TestBank platform</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-3">
+        <div class="card position-sticky" style="top: 1rem;">
+            <div class="card-body">
+                <h6 style="font-family: var(--font-display);">Quick Navigation</h6>
+                <nav class="nav flex-column" style="font-size: 0.88rem;">
+                    {% if user.is_instructor %}
+                    <a class="nav-link px-0 py-1" href="#getting-started">Getting Started</a>
+                    <a class="nav-link px-0 py-1" href="#importing">Importing Questions</a>
+                    <a class="nav-link px-0 py-1" href="#managing-questions">Managing Questions</a>
+                    <a class="nav-link px-0 py-1" href="#creating-assignments">Creating Assignments</a>
+                    <a class="nav-link px-0 py-1" href="#publishing">Publishing & Assigning</a>
+                    <a class="nav-link px-0 py-1" href="#grading">Grading</a>
+                    <a class="nav-link px-0 py-1" href="#monitoring">Monitoring Students</a>
+                    <a class="nav-link px-0 py-1" href="#students-roster">Student Roster</a>
+                    <a class="nav-link px-0 py-1" href="#backup">Backup & Restore</a>
+                    {% else %}
+                    <a class="nav-link px-0 py-1" href="#student-getting-started">Getting Started</a>
+                    <a class="nav-link px-0 py-1" href="#taking-assignments">Taking Assignments</a>
+                    <a class="nav-link px-0 py-1" href="#question-types">Question Types</a>
+                    <a class="nav-link px-0 py-1" href="#viewing-results">Viewing Results</a>
+                    <a class="nav-link px-0 py-1" href="#mistakes">Mistake Collection</a>
+                    <a class="nav-link px-0 py-1" href="#analytics">Analytics</a>
+                    <a class="nav-link px-0 py-1" href="#tips">Tips for Success</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+        {% if user.is_instructor %}
+        <!-- ==================== INSTRUCTOR GUIDE ==================== -->
+
+        <div class="card mb-4 fade-in" id="getting-started">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-rocket-takeoff me-2" style="color: var(--gold);"></i>Getting Started</h5></div>
+            <div class="card-body">
+                <p>Welcome to TestBank! Here's the typical workflow:</p>
+                <ol>
+                    <li><strong>Import questions</strong> from your textbook's Word (.docx) test bank files</li>
+                    <li><strong>Review & edit</strong> any questions that need fixing in the Question Browser</li>
+                    <li><strong>Add students</strong> via CSV import in the Student Roster</li>
+                    <li><strong>Create assignments</strong> by auto-generating or hand-picking questions</li>
+                    <li><strong>Publish</strong> the assignment to make it visible to students</li>
+                    <li><strong>Monitor</strong> progress and grade free-response answers</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="importing">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-upload me-2" style="color: var(--gold);"></i>Importing Questions</h5></div>
+            <div class="card-body">
+                <p>Go to <strong>Questions</strong> in the navigation bar and click <strong>"Import .docx"</strong>.</p>
+                <ol>
+                    <li>Upload a <code>.docx</code> test bank file (e.g., "Chapter 4.docx" from Pearson)</li>
+                    <li>The system parses the file and shows a <strong>preview</strong>: chapter, number of questions, types breakdown, sections found</li>
+                    <li>If the chapter already exists, it will <strong>update</strong> existing questions — not duplicate them</li>
+                    <li>Click <strong>"Confirm Import"</strong> to proceed, or <strong>"Cancel"</strong> to go back</li>
+                </ol>
+                <div class="alert alert-info mt-3" style="font-size: 0.9rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Supported format:</strong> Pearson testbank .docx files with the standard format (question number, choices A-E, Answer, Diff, Section, Skill metadata). Images and tables are also extracted.
+                </div>
+                <p class="mb-0">You can also import via command line: <code>python3 manage.py import_testbank "chapter 4.docx"</code></p>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="managing-questions">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-collection me-2" style="color: var(--gold);"></i>Managing Questions</h5></div>
+            <div class="card-body">
+                <p>The <strong>Question Browser</strong> lets you browse, filter, and edit your entire question pool.</p>
+                <h6>Filters</h6>
+                <ul>
+                    <li><strong>Chapter</strong> — filter by textbook chapter</li>
+                    <li><strong>Section</strong> — narrow to a specific section within the chapter</li>
+                    <li><strong>Difficulty</strong> — Easy (1), Medium (2), Hard (3)</li>
+                    <li><strong>Skill</strong> — Conceptual, Definition, or Analytical</li>
+                    <li><strong>Type</strong> — Multiple Choice, Numeric, or Free Response</li>
+                    <li><strong>Search</strong> — full-text search within question text</li>
+                </ul>
+                <h6>Editing Questions</h6>
+                <p>Click the <strong>"Edit"</strong> button on any question to:</p>
+                <ul>
+                    <li>Fix question text, change type/difficulty/skill</li>
+                    <li>Edit MC choices and set the correct answer</li>
+                    <li>Set or update the numeric answer value</li>
+                    <li>Edit or remove the context/reference information</li>
+                    <li>Update the explanation shown to students after submission</li>
+                </ul>
+                <p class="mb-0">Each question has a unique ID (e.g., <strong>CH4-037</strong>) for easy reference.</p>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="creating-assignments">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-plus-circle me-2" style="color: var(--gold);"></i>Creating Assignments</h5></div>
+            <div class="card-body">
+                <h6>Assignment Details</h6>
+                <ul>
+                    <li><strong>Title</strong> — e.g., "Homework 1 - Time Value of Money"</li>
+                    <li><strong>Mode</strong> — "Assignment" (graded) or "Practice" (ungraded)</li>
+                    <li><strong>Due Date</strong> — optional deadline</li>
+                    <li><strong>Randomize</strong> — shuffle question order and MC choice order per student</li>
+                </ul>
+                <h6>Two Methods</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6><i class="bi bi-shuffle me-1"></i>Auto-Generate</h6>
+                            <p class="small mb-0">Set the number of questions. Use the chapter, section, difficulty, skill, and type filters on the right. The system randomly draws from the matching pool. Each student gets a different random set.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6><i class="bi bi-hand-index me-1"></i>Hand-Pick</h6>
+                            <p class="small mb-0">Browse all questions with search and filters. Check the ones you want. Sort by ID, Section, Difficulty, or Type. The selected count shows at the bottom. All students get these exact questions (order is randomized if enabled).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="publishing">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-send me-2" style="color: var(--gold);"></i>Publishing & Assigning</h5></div>
+            <div class="card-body">
+                <p>After creating an assignment, it starts as a <strong>Draft</strong> (not visible to students).</p>
+                <ol>
+                    <li>From the Dashboard, click <strong>"Publish"</strong> next to the assignment</li>
+                    <li>This automatically assigns questions to all students (randomized if enabled)</li>
+                    <li>Students will see it on their Dashboard and Assignment list</li>
+                    <li>You can <strong>"Unpublish"</strong> to hide it again (students who started can still finish)</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="grading">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil-square me-2" style="color: var(--gold);"></i>Grading</h5></div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>Multiple Choice</strong> — auto-graded instantly when student selects an answer</li>
+                    <li><strong>Numeric</strong> — auto-graded with a 1% tolerance (configurable per question)</li>
+                    <li><strong>Free Response</strong> — requires manual grading. Go to <strong>Dashboard → "Grade Free Response"</strong> to see the grading queue. You can mark each answer as correct/incorrect and add feedback.</li>
+                </ul>
+                <p class="mb-0">Scores update automatically when you grade free-response answers.</p>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="monitoring">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-eye me-2" style="color: var(--gold);"></i>Monitoring Students</h5></div>
+            <div class="card-body">
+                <p>Click any assignment title on the Dashboard to see:</p>
+                <ul>
+                    <li>Per-student status (Not Started / In Progress / Completed)</li>
+                    <li>Scores and completion times</li>
+                    <li>Click <strong>"View Answers"</strong> to see a student's detailed responses — each question, their answer, right/wrong, and time spent</li>
+                </ul>
+                <p>The Dashboard also shows:</p>
+                <ul>
+                    <li><strong>Score Distribution</strong> chart for the latest assignment</li>
+                    <li><strong>Student Summary</strong> table with average scores and total time across all assignments</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="students-roster">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-people me-2" style="color: var(--gold);"></i>Student Roster</h5></div>
+            <div class="card-body">
+                <h6>Adding Students</h6>
+                <p>Go to <strong>Students</strong> in the nav. Upload a CSV file with columns:</p>
+                <code class="d-block bg-light p-2 rounded mb-3">username, first_name, last_name, student_id, email</code>
+                <p>The system auto-generates passwords and downloads a credential sheet (CSV) for you to distribute to students. Students must change their password on first login.</p>
+                <h6>Managing Students</h6>
+                <ul>
+                    <li><strong>Reset Password</strong> — generates a new random password (shown once)</li>
+                    <li><strong>Remove</strong> — deletes the student account and all their data</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="backup">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-shield-check me-2" style="color: var(--gold);"></i>Backup & Restore</h5></div>
+            <div class="card-body">
+                <p>From the Question Browser page header:</p>
+                <ul>
+                    <li><strong>Backup</strong> — downloads the entire database as a <code>.sqlite3</code> file. Do this regularly!</li>
+                    <li><strong>Restore</strong> — upload a previously downloaded backup to replace the current database. Warning: this overwrites everything.</li>
+                </ul>
+                <div class="alert alert-warning" style="font-size: 0.9rem;">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>Recommendation:</strong> Download a backup before each major import or at least weekly. Store backups in a safe location.
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- ==================== STUDENT GUIDE ==================== -->
+
+        <div class="card mb-4 fade-in" id="student-getting-started">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-rocket-takeoff me-2" style="color: var(--gold);"></i>Getting Started</h5></div>
+            <div class="card-body">
+                <ol>
+                    <li>Log in with the username and password provided by your instructor</li>
+                    <li>If this is your first login, you'll be asked to <strong>change your password</strong></li>
+                    <li>Your <strong>Dashboard</strong> shows active assignments and recent results</li>
+                    <li>Click <strong>"Start"</strong> on any assignment to begin</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="taking-assignments">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-journal-check me-2" style="color: var(--gold);"></i>Taking Assignments</h5></div>
+            <div class="card-body">
+                <ol>
+                    <li>Click <strong>"Start"</strong> on an assignment from your Dashboard or Assignments page</li>
+                    <li>Questions are shown <strong>one at a time</strong></li>
+                    <li>Use the numbered buttons on the left to navigate between questions</li>
+                    <li>The timer tracks how long you spend on each question</li>
+                    <li>The progress bar shows how many questions you've answered</li>
+                    <li>You can go back and change answers before submitting</li>
+                    <li>On the last question, click <strong>"Submit Assignment"</strong> when you're done</li>
+                </ol>
+                <div class="alert alert-info" style="font-size: 0.9rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Note:</strong> Your answers are saved automatically as you go. If your browser closes or you lose connection, you can come back and continue where you left off.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="question-types">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-question-circle me-2" style="color: var(--gold);"></i>Question Types</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100">
+                            <h6><span class="badge badge-type me-1">Multiple Choice</span></h6>
+                            <p class="small mb-0">Click on the answer you think is correct. Your selection is saved instantly (no need to press Save). A checkmark appears on your selected answer. You can change your answer by clicking a different option.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100">
+                            <h6><span class="badge badge-type me-1">Numeric</span></h6>
+                            <p class="small mb-0">Type a number in the input field. You can include dollar signs ($) and commas — they'll be stripped automatically. Click <strong>"Save Answer"</strong> when done. Your answer is checked against the correct value with a small tolerance.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100">
+                            <h6><span class="badge badge-type me-1">Free Response</span></h6>
+                            <p class="small mb-0">Type your answer in the text box (up to 5,000 characters). Click <strong>"Save Answer"</strong>. These are graded manually by your instructor, so the score may update later.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="viewing-results">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-trophy me-2" style="color: var(--gold);"></i>Viewing Results</h5></div>
+            <div class="card-body">
+                <p>After submitting an assignment, you'll see your results:</p>
+                <ul>
+                    <li>Your <strong>total score</strong> at the top</li>
+                    <li>Each question marked as <span class="badge bg-success">Correct</span>, <span class="badge bg-danger">Incorrect</span>, or <span class="badge bg-secondary">Pending</span> (for free response)</li>
+                    <li>For incorrect MC questions, the <strong>correct answer</strong> is shown</li>
+                    <li>The <strong>explanation</strong> (if available) helps you understand why</li>
+                    <li>Any <strong>instructor feedback</strong> on free-response questions</li>
+                </ul>
+                <p class="mb-0">You can always revisit results from your Dashboard or Assignments page.</p>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="mistakes">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-bookmark-x me-2" style="color: var(--gold);"></i>Mistake Collection</h5></div>
+            <div class="card-body">
+                <p>Every question you get wrong is automatically added to your <strong>Mistake Collection</strong>.</p>
+                <ul>
+                    <li>Go to <strong>Mistakes</strong> in the navigation bar</li>
+                    <li>Filter by chapter using the dropdown</li>
+                    <li>Click <strong>"Re-Practice All"</strong> to generate a quiz from your mistakes</li>
+                    <li>When you feel confident about a question, click <strong>"Mark Mastered"</strong> to hide it</li>
+                    <li>The practice count shows how many times you've reviewed each question</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="analytics">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-graph-up me-2" style="color: var(--gold);"></i>Analytics</h5></div>
+            <div class="card-body">
+                <p>Go to <strong>Analytics</strong> to see your performance breakdown:</p>
+                <ul>
+                    <li><strong>Per-Chapter Accuracy</strong> — see which chapters you're strong/weak in</li>
+                    <li><strong>Difficulty Breakdown</strong> — how you perform on Easy/Medium/Hard questions</li>
+                    <li><strong>Skill Breakdown</strong> — Conceptual vs Definition vs Analytical</li>
+                    <li><strong>Progress Over Time</strong> — your scores across assignments</li>
+                    <li><strong>Weakest Areas</strong> — specific sections where you need the most improvement</li>
+                </ul>
+                <p class="mb-0">Use these insights to focus your study time on the areas that matter most.</p>
+            </div>
+        </div>
+
+        <div class="card mb-4 fade-in" id="tips">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-lightbulb me-2" style="color: var(--gold);"></i>Tips for Success</h5></div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Complete assignments well before the due date in case of technical issues</li>
+                    <li>Review your mistakes regularly — spaced repetition helps retention</li>
+                    <li>Use the Analytics page to identify your weak areas before exams</li>
+                    <li>Read the explanations for questions you got wrong</li>
+                    <li>Your answers are saved as you go — you won't lose progress if your browser closes</li>
+                    <li>If a question has reference information (table, scenario), read it carefully before answering</li>
+                </ul>
+            </div>
+        </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

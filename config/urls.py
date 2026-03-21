@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect, render
 
 
 def home_redirect(request):
@@ -13,9 +14,15 @@ def home_redirect(request):
     return redirect('student_dashboard')
 
 
+@login_required
+def help_page(request):
+    return render(request, 'help.html')
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_redirect, name='home'),
+    path('help/', help_page, name='help'),
     path('accounts/', include('accounts.urls')),
     path('questions/', include('questions.urls')),
     path('assignments/', include('assignments.urls')),
