@@ -432,6 +432,10 @@ a:hover { color: var(--gold); }
   font-size: 0.9rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+.form-select {
+  padding-right: 2.5rem;  /* Extra space for the dropdown arrow */
+  background-position: right 0.75rem center;
+}
 .form-control:focus, .form-select:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(212,168,67,0.15);
