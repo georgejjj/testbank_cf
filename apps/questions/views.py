@@ -239,6 +239,50 @@ def question_edit(request, pk):
 
 
 @login_required
+def question_delete(request, pk):
+    """Delete a single question."""
+    if not request.user.is_instructor or request.method != 'POST':
+        return redirect('question_browser')
+
+    question = get_object_or_404(Question, pk=pk)
+    uid = question.uid
+    question.delete()
+    messages.success(request, f'Question {uid} deleted.')
+    return redirect('question_browser')
+
+
+@login_required
+def questions_clean(request):
+    """Delete ALL questions, sections, chapters, and context groups."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    if request.method == 'POST' and request.POST.get('confirm') == 'DELETE ALL':
+        from .models import ContextGroup
+        count = Question.objects.count()
+        Question.objects.all().delete()
+        MCChoice.objects.all().delete()
+        NumericAnswer.objects.all().delete()
+        ContextGroup.objects.all().delete()
+        Section.objects.all().delete()
+        Chapter.objects.all().delete()
+
+        # Also clean media/questions/
+        questions_media = os.path.join(str(settings.MEDIA_ROOT), 'questions')
+        if os.path.exists(questions_media):
+            shutil.rmtree(questions_media)
+            os.makedirs(questions_media)
+
+        messages.success(request, f'Deleted {count} questions and all related data. Question database is now empty.')
+        return redirect('question_browser')
+
+    return render(request, 'questions/clean.html', {
+        'total_questions': Question.objects.count(),
+        'total_chapters': Chapter.objects.count(),
+    })
+
+
+@login_required
 def questions_export(request):
     """Export all questions as ZIP (JSON + media images)."""
     if not request.user.is_instructor:

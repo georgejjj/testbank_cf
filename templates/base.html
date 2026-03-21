@@ -115,9 +115,10 @@
               <li><a class="dropdown-item" href="{% url 'password_change' %}"><i class="bi bi-key me-2"></i>Change Password</a></li>
               {% if user.is_instructor %}
               <li><hr class="dropdown-divider"></li>
-              <li><span class="dropdown-item-text text-muted" style="font-size:0.75rem;">Full Database</span></li>
-              <li><a class="dropdown-item" href="{% url 'database_backup' %}"><i class="bi bi-download me-2"></i>Full Backup</a></li>
-              <li><a class="dropdown-item text-danger" href="{% url 'database_restore' %}"><i class="bi bi-arrow-counterclockwise me-2"></i>Full Restore</a></li>
+              <li><span class="dropdown-item-text text-muted" style="font-size:0.75rem;">Danger Zone</span></li>
+              <li><a class="dropdown-item" href="{% url 'database_backup' %}"><i class="bi bi-download me-2"></i>Full DB Backup</a></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'database_restore' %}"><i class="bi bi-arrow-counterclockwise me-2"></i>Full DB Restore</a></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'questions_clean' %}"><i class="bi bi-trash me-2"></i>Clean All Questions</a></li>
               {% endif %}
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
