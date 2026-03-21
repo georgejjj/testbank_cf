@@ -3,12 +3,14 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-end">
     <div>
-        <h2>Instructor Dashboard</h2>
+        <h2>{% if user.is_ta %}TA{% else %}Instructor{% endif %} Dashboard</h2>
         <p class="page-subtitle">{{ total_students }} student{{ total_students|pluralize }} enrolled</p>
     </div>
+    {% if user.is_instructor %}
     <a href="{% url 'assignment_create' %}" class="btn btn-gold">
         <i class="bi bi-plus-lg me-1"></i>Create Assignment
     </a>
+    {% endif %}
 </div>
 
 <!-- Assignments Table -->
@@ -52,6 +54,7 @@
                     {% else %}&mdash;{% endif %}
                 </td>
                 <td class="text-end">
+                    {% if user.is_instructor %}
                     {% if not a.is_published %}
                     <a href="{% url 'assignment_edit' a.pk %}" class="btn btn-sm btn-outline-secondary me-1"
                        title="Edit questions in this assignment">
@@ -75,6 +78,7 @@
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

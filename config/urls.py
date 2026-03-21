@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 def home_redirect(request):
     if not request.user.is_authenticated:
         return redirect('login')
-    if request.user.is_instructor:
+    if request.user.is_instructor or request.user.is_ta:
         return redirect('instructor_dashboard')
     return redirect('student_dashboard')
 

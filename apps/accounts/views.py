@@ -22,7 +22,7 @@ class CustomLoginView(LoginView):
         user = self.request.user
         if user.must_change_password:
             return reverse_lazy('password_change')
-        if user.is_instructor:
+        if user.is_instructor or user.is_ta:
             return reverse_lazy('instructor_dashboard')
         return reverse_lazy('student_dashboard')
 
@@ -46,13 +46,13 @@ def logout_view(request):
 
 @login_required
 def student_roster(request):
-    if not request.user.is_instructor:
+    if not request.user.is_staff_role:
         return redirect('student_dashboard')
 
     students = User.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
     form = CSVImportForm()
 
-    if request.method == 'POST':
+    if request.method == 'POST' and request.user.is_instructor:
         if 'csv_file' in request.FILES:
             form = CSVImportForm(request.POST, request.FILES)
             if form.is_valid():

@@ -27,7 +27,7 @@ from .models import (
 
 @login_required
 def instructor_dashboard(request):
-    if not request.user.is_instructor:
+    if not request.user.is_staff_role:
         return redirect('student_dashboard')
 
     assignments = Assignment.objects.filter(created_by=request.user).annotate(
@@ -272,7 +272,7 @@ def assignment_preview(request, pk):
 
 @login_required
 def assignment_detail(request, pk):
-    if not request.user.is_instructor:
+    if not request.user.is_staff_role:
         return redirect('student_dashboard')
     assignment = get_object_or_404(Assignment, pk=pk)
     student_assignments = assignment.student_assignments.select_related('student').order_by('student__last_name')
@@ -284,8 +284,8 @@ def assignment_detail(request, pk):
 
 @login_required
 def student_detail(request, sa_pk):
-    """Instructor view: see a specific student's answers for an assignment."""
-    if not request.user.is_instructor:
+    """Instructor/TA view: see a specific student's answers for an assignment."""
+    if not request.user.is_staff_role:
         return redirect('student_dashboard')
 
     sa = get_object_or_404(StudentAssignment, pk=sa_pk)
@@ -311,7 +311,7 @@ def student_detail(request, sa_pk):
 
 @login_required
 def grade_free_response(request):
-    if not request.user.is_instructor:
+    if not request.user.is_staff_role:
         return redirect('student_dashboard')
 
     if request.method == 'POST':

@@ -3,7 +3,7 @@ from django.db import models
 
 
 class User(AbstractUser):
-    ROLE_CHOICES = [('INSTRUCTOR', 'Instructor'), ('STUDENT', 'Student')]
+    ROLE_CHOICES = [('INSTRUCTOR', 'Instructor'), ('TA', 'Teaching Assistant'), ('STUDENT', 'Student')]
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='STUDENT')
     student_id = models.CharField(max_length=50, blank=True, default='')
@@ -12,6 +12,15 @@ class User(AbstractUser):
     @property
     def is_instructor(self):
         return self.role == 'INSTRUCTOR'
+
+    @property
+    def is_ta(self):
+        return self.role == 'TA'
+
+    @property
+    def is_staff_role(self):
+        """True for both instructor and TA — can access admin-side views."""
+        return self.role in ('INSTRUCTOR', 'TA')
 
     @property
     def is_student(self):
