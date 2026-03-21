@@ -1,18 +1,27 @@
 let timerInterval = null;
 let elapsedSeconds = 0;
+let timerKey = '';  // localStorage key per assignment
 
-function startTimer(elementId, startFrom) {
-    elapsedSeconds = startFrom || 0;
+function startTimer(elementId, startFrom, assignmentKey) {
+    timerKey = 'timer_' + (assignmentKey || 'default');
+
+    // Use localStorage value if it's higher than server value (more recent)
+    var stored = parseInt(localStorage.getItem(timerKey) || '0');
+    elapsedSeconds = Math.max(startFrom || 0, stored);
+
     const el = document.getElementById(elementId);
     if (timerInterval) clearInterval(timerInterval);
 
-    // Display immediately
     updateTimerDisplay(el);
 
     timerInterval = setInterval(() => {
         if (!document.hidden) {
             elapsedSeconds++;
             updateTimerDisplay(el);
+            // Save to localStorage every 5 seconds
+            if (elapsedSeconds % 5 === 0) {
+                localStorage.setItem(timerKey, elapsedSeconds);
+            }
         }
     }, 1000);
 }
@@ -31,5 +40,11 @@ function updateTimerDisplay(el) {
 }
 
 function getElapsedSeconds() {
+    // Also save to localStorage when reading
+    if (timerKey) localStorage.setItem(timerKey, elapsedSeconds);
     return elapsedSeconds;
+}
+
+function clearTimerStorage(assignmentKey) {
+    localStorage.removeItem('timer_' + (assignmentKey || 'default'));
 }

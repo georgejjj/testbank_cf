@@ -112,7 +112,7 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-success w-100 py-2"
                         style="font-size: 1rem;"
-                        onclick="return confirm('Submit assignment? You cannot change answers after this.')">
+                        onclick="if(confirm('Submit assignment? You cannot change answers after this.')){clearTimerStorage('{{ sa.pk }}');return true;}return false;">
                     <i class="bi bi-send-fill me-2"></i>Submit Assignment
                 </button>
             </form>
