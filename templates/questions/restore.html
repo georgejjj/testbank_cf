@@ -1,32 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Restore Database - TestBank{% endblock %}
+{% block title %}Import Questions from JSON - TestBank{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Restore Database</h2>
-    <p class="page-subtitle">Upload a backup file to restore the database</p>
+    <h2>Import Questions from JSON</h2>
+    <p class="page-subtitle">Restore questions from a previously exported JSON backup</p>
 </div>
 
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-body p-4">
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Warning:</strong> This will replace the entire database with the backup file.
-                    All current data (questions, assignments, student answers, scores) will be overwritten.
-                    This action cannot be undone.
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This imports <strong>questions only</strong> (chapters, sections, questions, choices).
+                    Existing questions with the same number will be updated. No questions will be deleted.
+                    Student data and assignments are not affected.
                 </div>
 
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">Backup File (.sqlite3)</label>
-                        <input type="file" name="backup_file" class="form-control" accept=".sqlite3,.db" required>
-                        <small class="text-muted">Upload a file previously downloaded via "Backup DB"</small>
+                        <label class="form-label">JSON File</label>
+                        <input type="file" name="json_file" class="form-control" accept=".json" required>
+                        <small class="text-muted">Upload a file previously downloaded via "Export Questions"</small>
                     </div>
-                    <button type="submit" class="btn btn-danger w-100"
-                            onclick="return confirm('Are you sure? This will REPLACE all current data with the backup. This cannot be undone.')">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>Restore Database
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-upload me-1"></i>Import Questions
                     </button>
                     <a href="{% url 'question_browser' %}" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
                 </form>

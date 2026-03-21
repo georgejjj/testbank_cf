@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Restore Full Database - TestBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Restore Full Database</h2>
+    <p class="page-subtitle">Replace the entire database from a backup file</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Danger Zone:</strong> This will replace the <strong>entire database</strong> — all questions, assignments, student accounts, answers, scores, and settings will be overwritten with the backup. This cannot be undone.
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Database Backup File (.sqlite3)</label>
+                        <input type="file" name="backup_file" class="form-control" accept=".sqlite3,.db" required>
+                        <small class="text-muted">Upload a file previously downloaded via "Full Backup"</small>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100"
+                            onclick="return confirm('Are you absolutely sure? This will REPLACE ALL DATA including student records. This cannot be undone.')">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Restore Full Database
+                    </button>
+                    <a href="/" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

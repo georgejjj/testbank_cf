@@ -207,8 +207,122 @@ def question_edit(request, pk):
 
 
 @login_required
+def questions_export(request):
+    """Export all questions as JSON for backup/transfer."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    import json as json_lib
+    from django.http import HttpResponse
+
+    data = {'chapters': []}
+    for chapter in Chapter.objects.prefetch_related('sections__questions__choices', 'sections__questions__context_group').all():
+        ch_data = {'number': chapter.number, 'title': chapter.title, 'textbook': chapter.textbook, 'sections': []}
+        for section in chapter.sections.all():
+            sec_data = {'number': section.number, 'title': section.title, 'sort_order': section.sort_order, 'questions': []}
+            for q in section.questions.all():
+                q_data = {
+                    'question_number': q.question_number,
+                    'global_number': q.global_number,
+                    'question_type': q.question_type,
+                    'text': q.text,
+                    'difficulty': q.difficulty,
+                    'skill': q.skill,
+                    'explanation': q.explanation,
+                    'answer_raw_text': q.answer_raw_text,
+                    'image': q.image,
+                }
+                if q.context_group:
+                    q_data['context'] = {'text': q.context_group.text, 'image': q.context_group.image}
+                if q.question_type == 'MC':
+                    q_data['choices'] = [{'letter': c.letter, 'text': c.text, 'is_correct': c.is_correct} for c in q.choices.all()]
+                if q.question_type == 'NUMERIC':
+                    try:
+                        na = q.numeric_answer
+                        q_data['numeric_answer'] = {'value': str(na.value), 'tolerance_percent': str(na.tolerance_percent)}
+                    except NumericAnswer.DoesNotExist:
+                        pass
+                sec_data['questions'].append(q_data)
+            ch_data['sections'].append(sec_data)
+        data['chapters'].append(ch_data)
+
+    response = HttpResponse(json_lib.dumps(data, ensure_ascii=False, indent=2), content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="testbank_questions.json"'
+    return response
+
+
+@login_required
+def questions_import_json(request):
+    """Import questions from a previously exported JSON file."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    if request.method == 'POST' and request.FILES.get('json_file'):
+        import json as json_lib
+        from decimal import Decimal
+
+        try:
+            data = json_lib.loads(request.FILES['json_file'].read().decode('utf-8-sig'))
+        except Exception:
+            messages.error(request, 'Invalid JSON file.')
+            return redirect('question_browser')
+
+        count = 0
+        for ch_data in data.get('chapters', []):
+            chapter, _ = Chapter.objects.update_or_create(
+                number=ch_data['number'],
+                defaults={'title': ch_data['title'], 'textbook': ch_data.get('textbook', 'Corporate Finance 6e')},
+            )
+            for sec_data in ch_data.get('sections', []):
+                section, _ = Section.objects.update_or_create(
+                    chapter=chapter, number=sec_data['number'],
+                    defaults={'title': sec_data['title'], 'sort_order': sec_data.get('sort_order', 0)},
+                )
+                for q_data in sec_data.get('questions', []):
+                    # Handle context
+                    context_group = None
+                    if q_data.get('context'):
+                        from .models import ContextGroup
+                        context_group, _ = ContextGroup.objects.get_or_create(
+                            text=q_data['context']['text'][:200],
+                            defaults={'text': q_data['context']['text'], 'image': q_data['context'].get('image', ''), 'section': section},
+                        )
+
+                    q, created = Question.objects.update_or_create(
+                        section=section, question_number=q_data['question_number'],
+                        defaults={
+                            'global_number': q_data.get('global_number', 0),
+                            'question_type': q_data['question_type'],
+                            'text': q_data['text'],
+                            'difficulty': q_data['difficulty'],
+                            'skill': q_data['skill'],
+                            'explanation': q_data.get('explanation', ''),
+                            'answer_raw_text': q_data.get('answer_raw_text', ''),
+                            'image': q_data.get('image', ''),
+                            'context_group': context_group,
+                        },
+                    )
+                    if q_data.get('choices'):
+                        q.choices.all().delete()
+                        for c in q_data['choices']:
+                            MCChoice.objects.create(question=q, letter=c['letter'], text=c['text'], is_correct=c['is_correct'])
+                    if q_data.get('numeric_answer'):
+                        NumericAnswer.objects.update_or_create(
+                            question=q,
+                            defaults={'value': Decimal(q_data['numeric_answer']['value']),
+                                      'tolerance_percent': Decimal(q_data['numeric_answer'].get('tolerance_percent', '1.0'))},
+                        )
+                    count += 1
+
+        messages.success(request, f'Imported {count} questions from JSON.')
+        return redirect('question_browser')
+
+    return render(request, 'questions/restore.html')
+
+
+@login_required
 def database_backup(request):
-    """Download a backup of the SQLite database."""
+    """Download full database backup."""
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
@@ -216,7 +330,6 @@ def database_backup(request):
     db_path = str(settings.DATABASES['default']['NAME'])
     backup_path = tempfile.mktemp(suffix='.sqlite3')
 
-    # Use Python's sqlite3 backup API (safe even with WAL mode)
     src = sqlite3_lib.connect(db_path)
     dst = sqlite3_lib.connect(backup_path)
     src.backup(dst)
@@ -224,55 +337,48 @@ def database_backup(request):
     src.close()
 
     response = FileResponse(open(backup_path, 'rb'), content_type='application/x-sqlite3')
-    response['Content-Disposition'] = 'attachment; filename="testbank_backup.sqlite3"'
+    response['Content-Disposition'] = 'attachment; filename="testbank_full_backup.sqlite3"'
     return response
 
 
 @login_required
 def database_restore(request):
-    """Restore database from an uploaded backup file."""
+    """Restore full database from backup."""
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
     if request.method == 'POST' and request.FILES.get('backup_file'):
         backup_file = request.FILES['backup_file']
 
-        # Save uploaded file to temp
         with tempfile.NamedTemporaryFile(delete=False, suffix='.sqlite3') as tmp:
             for chunk in backup_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name
 
-        # Validate it's a real SQLite database
         import sqlite3 as sqlite3_lib
         try:
             conn = sqlite3_lib.connect(tmp_path)
-            # Check it has our tables
             cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = {row[0] for row in cursor.fetchall()}
             conn.close()
-
             required = {'questions_question', 'accounts_user', 'assignments_assignment'}
             if not required.issubset(tables):
                 os.unlink(tmp_path)
                 messages.error(request, 'Invalid backup file — missing required tables.')
-                return redirect('question_browser')
+                return redirect('home')
         except Exception:
             os.unlink(tmp_path)
             messages.error(request, 'Invalid file — not a valid SQLite database.')
-            return redirect('question_browser')
+            return redirect('home')
 
-        # Close all Django DB connections before replacing
         from django.db import connections
         for conn_name in connections:
             connections[conn_name].close()
 
-        # Replace the database file
         db_path = str(settings.DATABASES['default']['NAME'])
         shutil.copy2(tmp_path, db_path)
         os.unlink(tmp_path)
 
-        # Remove WAL/SHM files so SQLite starts fresh
         for ext in ['-wal', '-shm']:
             wal_path = db_path + ext
             if os.path.exists(wal_path):
@@ -281,7 +387,7 @@ def database_restore(request):
         messages.success(request, 'Database restored from backup. Please log in again.')
         return redirect('login')
 
-    return render(request, 'questions/restore.html')
+    return render(request, 'questions/restore_full.html')
 
 
 @login_required
