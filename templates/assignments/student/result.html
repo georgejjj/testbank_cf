@@ -43,5 +43,9 @@
     </div>
 </div>
 {% endfor %}
+{% if user.is_instructor %}
+<a href="{% url 'instructor_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+{% else %}
 <a href="{% url 'student_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+{% endif %}
 {% endblock %}

@@ -52,6 +52,10 @@
                     {% else %}&mdash;{% endif %}
                 </td>
                 <td class="text-end">
+                    <a href="{% url 'assignment_preview' a.pk %}" class="btn btn-sm btn-outline-secondary me-1"
+                       title="Take this assignment yourself to test it">
+                        <i class="bi bi-play-circle me-1"></i>Preview
+                    </a>
                     <form method="post" action="{% url 'assignment_publish' a.pk %}" class="d-inline">
                         {% csrf_token %}
                         <button class="btn btn-sm {% if a.is_published %}btn-outline-secondary{% else %}btn-gold{% endif %}">

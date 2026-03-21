@@ -149,6 +149,22 @@ def assignment_publish(request, pk):
 
 
 @login_required
+def assignment_preview(request, pk):
+    """Let instructor take the assignment themselves as a preview/test."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    assignment = get_object_or_404(Assignment, pk=pk, created_by=request.user)
+    sa = assign_questions_to_student(assignment, request.user)
+
+    if sa.assigned_questions.count() == 0:
+        messages.warning(request, 'No questions match the assignment filters. Check chapter/difficulty/type settings.')
+        return redirect('instructor_dashboard')
+
+    return redirect('take_assignment', sa_pk=sa.pk)
+
+
+@login_required
 def assignment_detail(request, pk):
     if not request.user.is_instructor:
         return redirect('student_dashboard')
