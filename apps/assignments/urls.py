@@ -28,4 +28,8 @@ urlpatterns = [
 
     # Analytics
     path('analytics/', views.student_analytics, name='student_analytics'),
+
+    # Messages
+    path('messages/', views.student_messages, name='student_messages'),
+    path('messages/inbox/', views.instructor_messages, name='instructor_messages'),
 ]

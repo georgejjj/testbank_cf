@@ -102,5 +102,19 @@ class MistakeEntry(models.Model):
         unique_together = [['student', 'question']]
         ordering = ['-added_at']
 
+
+class Message(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.sender}: {self.subject[:40]}"
+
     def __str__(self):
         return f"Mistake: {self.student} - Q{self.question.question_number}"

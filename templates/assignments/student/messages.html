@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Messages - TestBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Messages to Instructor</h2>
+    <p class="page-subtitle">Send questions, feedback, or report issues</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pencil-square me-2"></i>New Message</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Subject</label>
+                        <input type="text" name="subject" class="form-control" required
+                               placeholder="e.g. Question about CH4-037">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea name="body" class="form-control" rows="5" required
+                                  placeholder="Type your message here..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-send me-1"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <h5 style="font-family: var(--font-display);">
+            <i class="bi bi-clock-history me-2" style="color: var(--gold);"></i>My Messages
+        </h5>
+        {% for msg in my_messages %}
+        <div class="card mb-2 fade-in">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>{{ msg.subject }}</strong>
+                        {% if msg.is_read %}
+                        <span class="badge" style="background: var(--success-bg); color: var(--success); font-size: 0.7rem;">Read</span>
+                        {% else %}
+                        <span class="badge" style="background: var(--warning-bg); color: #9a7a20; font-size: 0.7rem;">Pending</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ msg.created_at|date:"M d, g:i A" }}</small>
+                </div>
+                <p class="mb-0 mt-1 text-muted" style="font-size: 0.88rem;">{{ msg.body|truncatechars:150 }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4">
+            <p>No messages sent yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

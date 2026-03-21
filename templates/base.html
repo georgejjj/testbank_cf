@@ -71,6 +71,11 @@
               <i class="bi bi-people me-1"></i>Students
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'instructor_messages' %}">
+              <i class="bi bi-envelope me-1"></i>Messages
+            </a>
+          </li>
           {% endif %}
 
           {% if user.is_student %}
@@ -92,6 +97,11 @@
           <li class="nav-item">
             <a class="nav-link" href="{% url 'student_analytics' %}">
               <i class="bi bi-graph-up me-1"></i>Analytics
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'student_messages' %}">
+              <i class="bi bi-envelope me-1"></i>Messages
             </a>
           </li>
           {% endif %}

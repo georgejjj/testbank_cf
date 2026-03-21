@@ -16,6 +16,7 @@ from services.randomizer import assign_questions_to_student
 from .models import (
     Assignment,
     AssignedQuestion,
+    Message,
     MistakeEntry,
     StudentAnswer,
     StudentAssignment,
@@ -768,4 +769,46 @@ def student_analytics(request):
         'total_answered': answers.count(),
         'total_correct': answers.filter(is_correct=True).count(),
         'weakest': weakest,
+    })
+
+
+# ---- Messages ----
+
+@login_required
+def student_messages(request):
+    """Student: send messages and see own message history."""
+    if not request.user.is_student:
+        return redirect('instructor_dashboard')
+
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        body = request.POST.get('body', '').strip()
+        if subject and body:
+            Message.objects.create(sender=request.user, subject=subject, body=body)
+            messages.success(request, 'Message sent to instructor.')
+        else:
+            messages.error(request, 'Please fill in both subject and message.')
+        return redirect('student_messages')
+
+    my_messages = Message.objects.filter(sender=request.user).order_by('-created_at')
+    return render(request, 'assignments/student/messages.html', {'my_messages': my_messages})
+
+
+@login_required
+def instructor_messages(request):
+    """Instructor: view all student messages."""
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    if request.method == 'POST' and request.POST.get('mark_read'):
+        msg_id = request.POST.get('message_id')
+        Message.objects.filter(id=msg_id).update(is_read=True)
+        return redirect('instructor_messages')
+
+    all_messages = Message.objects.select_related('sender').order_by('-created_at')
+    unread_count = all_messages.filter(is_read=False).count()
+
+    return render(request, 'assignments/instructor/messages.html', {
+        'all_messages': all_messages,
+        'unread_count': unread_count,
     })
