@@ -18,10 +18,7 @@ function startTimer(elementId, startFrom, assignmentKey) {
         if (!document.hidden) {
             elapsedSeconds++;
             updateTimerDisplay(el);
-            // Save to localStorage every 5 seconds
-            if (elapsedSeconds % 5 === 0) {
-                localStorage.setItem(timerKey, elapsedSeconds);
-            }
+            localStorage.setItem(timerKey, elapsedSeconds);
         }
     }, 1000);
 }
