@@ -692,6 +692,7 @@ def student_analytics(request):
 
     answers = StudentAnswer.objects.filter(
         student_assignment__student=request.user,
+        student_assignment__status='COMPLETED',
         is_correct__isnull=False,
     ).select_related('question__section__chapter')
 
