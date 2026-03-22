@@ -166,7 +166,7 @@ def parse_docx(docx_path):
                 continue
 
         # --- Context block ---
-        if re.match(r'^Use the (figure|information|table)', line_stripped, re.IGNORECASE):
+        if re.match(r'^Use the (following |figure|information|table)', line_stripped, re.IGNORECASE):
             _save_question(current_question, result)
             current_question = None
             current_context = {'text': line_stripped, 'image': ''}
