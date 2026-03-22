@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Grade Free Response - TestBank{% endblock %}
+{% block title %}Manual Grading - TestBank{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Grade Free Response</h2>
+  <h2>Manual Grading</h2>
   <span class="badge bg-warning text-dark fs-6">{{ ungraded|length }} remaining</span>
 </div>
 
 {% if not ungraded %}
 <div class="alert alert-success">
   <i class="bi bi-check-circle-fill"></i>
-  All free-response answers have been graded. Great work!
+  All answers have been graded. Great work!
 </div>
 {% else %}
 
@@ -33,14 +33,18 @@
     <!-- Question Text -->
     <div class="mb-3">
       <h6 class="text-muted">Question:</h6>
-      <p>{{ answer.question.text }}</p>
+      <p>{{ answer.question.text|safe }}</p>
     </div>
 
     <!-- Student Answer -->
     <div class="mb-3">
       <h6 class="text-muted">Student's Answer:</h6>
       <div class="bg-light p-3 rounded border">
-        {{ answer.text_answer|linebreaksbr }}
+        {% if answer.question.question_type == 'NUMERIC' %}
+          <strong>{{ answer.numeric_answer }}</strong>
+        {% else %}
+          {{ answer.text_answer|linebreaksbr }}
+        {% endif %}
       </div>
     </div>
 
@@ -51,6 +55,25 @@
       <div class="bg-light p-3 rounded border">
         {{ answer.question.answer_raw_text|safe }}
       </div>
+    </div>
+    {% endif %}
+
+    {% if answer.question.explanation %}
+    <div class="mb-3">
+      <h6 class="text-muted">Explanation:</h6>
+      <div class="bg-light p-3 rounded border">
+        {{ answer.question.explanation|safe }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Auto-grade suggestion for numeric -->
+    {% if answer.auto_suggestion is not None %}
+    <div class="alert {% if answer.auto_suggestion %}alert-success{% else %}alert-danger{% endif %} py-2 mb-3">
+      <i class="bi {% if answer.auto_suggestion %}bi-robot{% else %}bi-robot{% endif %} me-1"></i>
+      <strong>Auto-grade suggestion:</strong>
+      {% if answer.auto_suggestion %}Correct (within tolerance){% else %}Incorrect (outside tolerance){% endif %}
+      <span class="text-muted ms-2" style="font-size:0.85rem;">— verify before confirming</span>
     </div>
     {% endif %}
 

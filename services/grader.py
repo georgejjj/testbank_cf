@@ -58,17 +58,8 @@ def grade_answer(student_answer):
             student_answer.is_correct = False
 
     elif question.question_type == 'NUMERIC':
-        try:
-            numeric_answer = question.numeric_answer
-        except Exception:
-            student_answer.is_correct = None
-            return student_answer.is_correct
-
-        student_value = parse_numeric_input(student_answer.numeric_answer)
-        if student_value is not None:
-            student_answer.is_correct = grade_numeric(numeric_answer, student_value)
-        else:
-            student_answer.is_correct = False
+        # Numeric answers require manual grading — auto-grade is advisory only
+        student_answer.is_correct = None
 
     else:  # FREE_RESPONSE
         student_answer.is_correct = None

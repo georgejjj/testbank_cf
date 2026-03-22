@@ -329,9 +329,24 @@ def grade_free_response(request):
         return redirect('grade_free_response')
 
     ungraded = StudentAnswer.objects.filter(
-        question__question_type='FREE_RESPONSE',
+        question__question_type__in=['FREE_RESPONSE', 'NUMERIC'],
         is_correct__isnull=True,
-    ).exclude(text_answer='').select_related('student_assignment__student', 'question')
+    ).exclude(
+        text_answer='', numeric_answer__isnull=True,
+    ).select_related('student_assignment__student', 'question')
+
+    # Compute auto-grade suggestion for numeric answers
+    from services.grader import grade_numeric, parse_numeric_input
+    for answer in ungraded:
+        answer.auto_suggestion = None
+        if answer.question.question_type == 'NUMERIC':
+            try:
+                numeric_answer = answer.question.numeric_answer
+                student_value = parse_numeric_input(answer.numeric_answer)
+                if student_value is not None:
+                    answer.auto_suggestion = grade_numeric(numeric_answer, student_value)
+            except Exception:
+                pass
 
     return render(request, 'assignments/instructor/grade.html', {'ungraded': ungraded})
 
