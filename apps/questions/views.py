@@ -231,7 +231,7 @@ def question_edit(request, pk):
                 )
 
         messages.success(request, f'Question {question.uid} updated.')
-        return redirect('question_browser')
+        return redirect(request.POST.get('return_url') or 'question_browser')
 
     choices = list(question.choices.all()) if question.question_type == 'MC' else []
     numeric_answer = None
