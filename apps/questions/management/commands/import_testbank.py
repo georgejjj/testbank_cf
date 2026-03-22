@@ -1,9 +1,19 @@
 import os
+import re
 from django.db import models
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from questions.models import Chapter, Section, ContextGroup, Question, MCChoice, NumericAnswer
 from services.parser import parse_docx, extract_numeric_value
+
+
+def _inline_images(text, chapter_number):
+    """Convert [IMAGE:filename] markers in text to <img> tags."""
+    return re.sub(
+        r'\[IMAGE:([^\]]+)\]',
+        rf'<img src="/media/questions/ch{chapter_number}/\1" class="img-fluid" style="max-height:2em;vertical-align:middle;">',
+        text,
+    )
 
 
 class Command(BaseCommand):
@@ -115,15 +125,16 @@ class Command(BaseCommand):
 
             # Create or update question
             q_type = q_data.get('question_type') or 'FREE_RESPONSE'
+            ch_num = chapter.number
             defaults = {
                 'question_type': q_type,
-                'text': q_data['text'],
+                'text': _inline_images(q_data['text'], ch_num),
                 'difficulty': q_data.get('difficulty', 1),
                 'skill': q_data.get('skill', 'Conceptual'),
-                'explanation': q_data.get('explanation', ''),
+                'explanation': _inline_images(q_data.get('explanation', ''), ch_num),
                 'image': image_path,
                 'context_group': context_group,
-                'answer_raw_text': q_data.get('answer_raw_text', ''),
+                'answer_raw_text': _inline_images(q_data.get('answer_raw_text', ''), ch_num),
             }
             # Only assign global_number for new questions — preserve existing UIDs
             existing_q = Question.objects.filter(

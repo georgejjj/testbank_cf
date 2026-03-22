@@ -35,7 +35,7 @@
         {% endif %}
 
         {% if r.answer.question.explanation %}
-        <div class="alert alert-light mt-2"><strong>Explanation:</strong> {{ r.answer.question.explanation }}</div>
+        <div class="alert alert-light mt-2"><strong>Explanation:</strong> {{ r.answer.question.explanation|safe }}</div>
         {% endif %}
         {% if r.answer.instructor_feedback %}
         <div class="alert alert-info mt-2"><strong>Feedback:</strong> {{ r.answer.instructor_feedback }}</div>

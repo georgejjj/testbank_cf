@@ -82,7 +82,7 @@
             {% if me.question.explanation %}
             <div class="context-block">
                 <div class="context-label">Explanation</div>
-                {{ me.question.explanation }}
+                {{ me.question.explanation|safe }}
             </div>
             {% endif %}
 

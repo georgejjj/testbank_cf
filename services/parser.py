@@ -190,11 +190,17 @@ def parse_docx(docx_path):
         img_match = re.search(r'\[IMAGE:([^\]]+)\]', line_stripped)
         if img_match:
             img_name = img_match.group(1)
-            if current_context and state == 'CONTEXT':
-                current_context['image'] = img_name
-            elif current_question:
-                current_question['image'] = img_name
-            continue
+            # Standalone image line (only the marker, no surrounding text)
+            text_without_marker = re.sub(r'\[IMAGE:[^\]]+\]', '', line_stripped).strip()
+            if not text_without_marker:
+                if current_context and state == 'CONTEXT':
+                    current_context['image'] = img_name
+                elif current_question:
+                    current_question['image'] = img_name
+                continue
+            # Inline image — keep marker in text, will be converted to <img>
+            # during import when chapter number is known. Fall through to
+            # handle as normal text (explanation, question continuation, etc.)
 
         # --- Table marker ---
         if line_stripped == '[TABLE_START]':

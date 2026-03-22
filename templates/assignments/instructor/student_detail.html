@@ -70,7 +70,7 @@
         {% if r.answer.question.explanation %}
         <div class="context-block mt-3">
             <div class="context-label">Explanation</div>
-            {{ r.answer.question.explanation }}
+            {{ r.answer.question.explanation|safe }}
         </div>
         {% endif %}
 

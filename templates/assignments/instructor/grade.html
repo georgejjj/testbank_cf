@@ -49,7 +49,7 @@
     <div class="mb-3">
       <h6 class="text-muted">Expected Answer:</h6>
       <div class="bg-light p-3 rounded border">
-        {{ answer.question.answer_raw_text|linebreaksbr }}
+        {{ answer.question.answer_raw_text|safe }}
       </div>
     </div>
     {% endif %}
