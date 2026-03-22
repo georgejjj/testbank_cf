@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Chapter, Section, Question, MCChoice, NumericAnswer
+from .models import Chapter, ContextGroup, Section, Question, MCChoice, NumericAnswer
 from services.parser import parse_docx
 
 
@@ -184,17 +184,25 @@ def question_edit(request, pk):
         question.answer_raw_text = request.POST.get('answer_raw_text', '')
 
         # Handle context group
-        context_text = request.POST.get('context_text', '').strip()
-        if context_text:
-            from .models import ContextGroup
-            if question.context_group:
-                question.context_group.text = context_text
-                question.context_group.save()
+        context_action = request.POST.get('context_action', 'keep')
+        if context_action == 'remove':
+            question.context_group = None
+        elif context_action == 'existing':
+            cg_id = request.POST.get('context_group_id')
+            if cg_id:
+                question.context_group = ContextGroup.objects.filter(id=cg_id).first()
             else:
+                question.context_group = None
+        elif context_action == 'new':
+            context_text = request.POST.get('context_text_new', '').strip()
+            if context_text:
                 cg = ContextGroup.objects.create(text=context_text, section=question.section)
                 question.context_group = cg
-        else:
-            question.context_group = None
+        elif context_action == 'edit':
+            context_text = request.POST.get('context_text', '').strip()
+            if context_text and question.context_group:
+                question.context_group.text = context_text
+                question.context_group.save()
 
         question.save()
 
@@ -231,10 +239,17 @@ def question_edit(request, pk):
         except NumericAnswer.DoesNotExist:
             pass
 
+    # Get context groups from the same chapter for the dropdown
+    chapter = question.section.chapter
+    context_groups = ContextGroup.objects.filter(
+        section__chapter=chapter
+    ).order_by('section__number', 'id')
+
     return render(request, 'questions/edit.html', {
         'question': question,
         'choices': choices,
         'numeric_answer': numeric_answer,
+        'context_groups': context_groups,
     })
 
 

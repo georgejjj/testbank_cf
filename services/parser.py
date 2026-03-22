@@ -125,8 +125,9 @@ def parse_docx(docx_path):
     current_section = {'number': '', 'title': ''}
     current_context = None
     current_question = None
-    context_is_fresh = False  # True only between a context block and the first Skill: after it
+    context_is_fresh = False  # True while inside a context question group
     context_question_numbers = set()  # Track which question numbers belong to current context
+    context_ending = False  # Set True at Skill:, cleared if next line is a question (keeps group going)
     state = 'IDLE'
     table_lines = []
 
@@ -142,6 +143,12 @@ def parse_docx(docx_path):
             result['chapter_title'] = ch_match.group(2).strip()
             continue
 
+        # If context_ending is set and this line is NOT a question number,
+        # the context group has ended (a gap between Skill: and next question)
+        if context_ending and not re.match(r'^\d+\)\s+', line_stripped):
+            context_is_fresh = False
+            context_ending = False
+
         # --- Section header (e.g., "4.1   The Timeline") ---
         sec_match = re.match(r'^(\d+\.\d+)\s+(.*)', line_stripped)
         if sec_match and state in ('IDLE', 'METADATA'):
@@ -153,6 +160,8 @@ def parse_docx(docx_path):
                     result['sections'].append(current_section.copy())
                 # Clear context when entering a new section
                 current_context = None
+                context_is_fresh = False
+                context_ending = False
                 state = 'IDLE'
                 continue
 
@@ -193,10 +202,12 @@ def parse_docx(docx_path):
             table_lines = []
             continue
         if line_stripped == '[TABLE_END]':
-            if current_context:
+            if current_context and context_is_fresh:
                 table_html = _table_lines_to_html(table_lines)
                 current_context['text'] += '\n' + table_html
-            state = 'IDLE'
+                state = 'CONTEXT'  # Stay in CONTEXT so continuation text is captured
+            else:
+                state = 'IDLE'
             continue
         if state == 'TABLE':
             table_lines.append(line_stripped)
@@ -207,7 +218,11 @@ def parse_docx(docx_path):
         if q_match:
             _save_question(current_question, result)
             q_num = int(q_match.group(1))
-            # Only attach context if it's fresh (we haven't seen a non-context question yet)
+            # If context_ending is set, the previous question's Skill: was the last metadata.
+            # A new question immediately following keeps the context group alive.
+            if context_ending:
+                context_ending = False
+            # Only attach context if it's fresh
             attach_context = current_context if context_is_fresh else None
             if attach_context:
                 context_question_numbers.add(q_num)
@@ -284,6 +299,9 @@ def parse_docx(docx_path):
             elif skill.startswith('Def'):
                 skill = 'Definition'
             current_question['skill'] = skill
+            # Mark that this question's metadata is done — context may end
+            # unless the very next numbered item continues the group
+            context_ending = True
             state = 'METADATA'
             continue
 

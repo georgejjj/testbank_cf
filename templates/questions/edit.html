@@ -109,9 +109,50 @@
                     {% endif %}
 
                     <h6 class="mt-3">Context / Reference Info</h6>
-                    <textarea name="context_text" class="form-control form-control-sm mb-2" rows="4"
-                              placeholder="Shared context shown above this question (leave empty to remove)">{% if question.context_group %}{{ question.context_group.text }}{% endif %}</textarea>
-                    <small class="text-muted">Edit or clear the reference information shown to students</small>
+                    {% if question.context_group %}
+                    <div class="alert alert-light border py-2 px-3 mb-2" style="font-size: 0.85rem;">
+                        <strong>Current group #{{ question.context_group.id }}</strong>
+                        ({{ question.context_group.questions.count }} question{{ question.context_group.questions.count|pluralize }} share this)
+                        <div class="text-muted mt-1">{{ question.context_group.text|truncatechars:120 }}</div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small mb-2">No context group assigned.</p>
+                    {% endif %}
+
+                    <div class="mb-2">
+                        <select name="context_action" id="contextAction" class="form-select form-select-sm"
+                                onchange="document.querySelectorAll('.ctx-panel').forEach(p=>p.style.display='none'); var el=document.getElementById('ctx-'+this.value); if(el) el.style.display='block';">
+                            <option value="keep">Keep current (no change)</option>
+                            <option value="edit" {% if not question.context_group %}disabled{% endif %}>Edit current context text</option>
+                            <option value="existing">Assign to existing context group</option>
+                            <option value="new">Create new context group</option>
+                            <option value="remove">Remove context</option>
+                        </select>
+                    </div>
+
+                    <div id="ctx-edit" class="ctx-panel" style="display:none;">
+                        <textarea name="context_text" class="form-control form-control-sm mb-1" rows="4"
+                                  placeholder="Edit context text...">{% if question.context_group %}{{ question.context_group.text }}{% endif %}</textarea>
+                        <small class="text-muted">Warning: this edits the shared context for ALL questions in this group</small>
+                    </div>
+
+                    <div id="ctx-existing" class="ctx-panel" style="display:none;">
+                        <select name="context_group_id" class="form-select form-select-sm">
+                            <option value="">-- Select context group --</option>
+                            {% for cg in context_groups %}
+                            <option value="{{ cg.id }}" {% if question.context_group and question.context_group.id == cg.id %}selected{% endif %}>
+                                #{{ cg.id }} ({{ cg.section.number }}) — {{ cg.text|truncatechars:80 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Move this question to a different existing context group</small>
+                    </div>
+
+                    <div id="ctx-new" class="ctx-panel" style="display:none;">
+                        <textarea name="context_text_new" class="form-control form-control-sm mb-1" rows="4"
+                                  placeholder="Enter new context text..."></textarea>
+                        <small class="text-muted">Creates a brand new context group for this question</small>
+                    </div>
                 </div>
             </div>
 

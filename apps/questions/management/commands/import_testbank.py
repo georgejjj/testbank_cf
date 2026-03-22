@@ -93,23 +93,17 @@ class Command(BaseCommand):
             # Handle context group
             context_group = None
             if q_data.get('context'):
-                ctx_key = q_data['context']['text'][:200]
+                ctx_text = q_data['context']['text']
+                ctx_key = ctx_text[:500]
                 if ctx_key not in context_cache:
                     ctx_image = q_data['context'].get('image', '')
                     if ctx_image:
                         ctx_image = f'questions/ch{chapter.number}/{ctx_image}'
-                    # Try to find existing, otherwise create
-                    existing = ContextGroup.objects.filter(
-                        text__startswith=ctx_key[:80],
-                    ).first()
-                    if existing:
-                        context_group = existing
-                    else:
-                        context_group = ContextGroup.objects.create(
-                            text=q_data['context']['text'],
-                            image=ctx_image,
-                            section=section,
-                        )
+                    context_group = ContextGroup.objects.create(
+                        text=ctx_text,
+                        image=ctx_image,
+                        section=section,
+                    )
                     context_cache[ctx_key] = context_group
                 else:
                     context_group = context_cache[ctx_key]
