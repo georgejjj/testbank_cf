@@ -263,9 +263,12 @@ def question_delete(request, pk):
 
     question = get_object_or_404(Question, pk=pk)
     uid = question.uid
-    question.delete()
-    messages.success(request, f'Question {uid} deleted.')
-    return redirect('question_browser')
+    try:
+        question.delete()
+        messages.success(request, f'Question {uid} deleted.')
+    except Exception as e:
+        messages.error(request, f'Could not delete {uid}: {e}')
+    return redirect(request.META.get('HTTP_REFERER') or 'question_browser')
 
 
 @login_required
