@@ -115,21 +115,27 @@ class Command(BaseCommand):
 
             # Create or update question
             q_type = q_data.get('question_type') or 'FREE_RESPONSE'
-            global_counter += 1
+            defaults = {
+                'question_type': q_type,
+                'text': q_data['text'],
+                'difficulty': q_data.get('difficulty', 1),
+                'skill': q_data.get('skill', 'Conceptual'),
+                'explanation': q_data.get('explanation', ''),
+                'image': image_path,
+                'context_group': context_group,
+                'answer_raw_text': q_data.get('answer_raw_text', ''),
+            }
+            # Only assign global_number for new questions — preserve existing UIDs
+            existing_q = Question.objects.filter(
+                section=section, question_number=q_data['question_number']
+            ).first()
+            if existing_q is None:
+                global_counter += 1
+                defaults['global_number'] = global_counter
             question, created = Question.objects.update_or_create(
                 section=section,
                 question_number=q_data['question_number'],
-                defaults={
-                    'question_type': q_type,
-                    'text': q_data['text'],
-                    'difficulty': q_data.get('difficulty', 1),
-                    'skill': q_data.get('skill', 'Conceptual'),
-                    'explanation': q_data.get('explanation', ''),
-                    'image': image_path,
-                    'context_group': context_group,
-                    'global_number': global_counter,
-                    'answer_raw_text': q_data.get('answer_raw_text', ''),
-                },
+                defaults=defaults,
             )
 
             # Create MC choices
