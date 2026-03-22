@@ -532,6 +532,11 @@ def database_restore(request):
             if os.path.exists(wal_path):
                 os.unlink(wal_path)
 
+        # Clear old sessions so cookies signed with a different SECRET_KEY
+        # don't cause immediate re-login loops after restore
+        from django.contrib.sessions.models import Session
+        Session.objects.all().delete()
+
         messages.success(request, 'Database restored from backup. Please log in again.')
         return redirect('login')
 
