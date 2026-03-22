@@ -196,11 +196,13 @@ def question_edit(request, pk):
         elif context_action == 'new':
             context_text = request.POST.get('context_text_new', '').strip()
             if context_text:
+                context_text = context_text.replace('\r\n', '\n').replace('\n', '<br>')
                 cg = ContextGroup.objects.create(text=context_text, section=question.section)
                 question.context_group = cg
         elif context_action == 'edit':
             context_text = request.POST.get('context_text', '').strip()
             if context_text and question.context_group:
+                context_text = context_text.replace('\r\n', '\n').replace('\n', '<br>')
                 question.context_group.text = context_text
                 question.context_group.save()
 

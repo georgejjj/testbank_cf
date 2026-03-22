@@ -131,9 +131,9 @@
                     </div>
 
                     <div id="ctx-edit" class="ctx-panel" style="display:none;">
-                        <textarea name="context_text" class="form-control form-control-sm mb-1" rows="4"
+                        <textarea name="context_text" id="ctxEditText" class="form-control form-control-sm mb-1" rows="4"
                                   placeholder="Edit context text...">{% if question.context_group %}{{ question.context_group.text }}{% endif %}</textarea>
-                        <small class="text-muted">Warning: this edits the shared context for ALL questions in this group</small>
+                        <small class="text-muted">Warning: this edits the shared context for ALL questions in this group. Press Enter for new paragraph.</small>
                     </div>
 
                     <div id="ctx-existing" class="ctx-panel" style="display:none;">
@@ -172,5 +172,8 @@ function toggleTypeFields() {
     document.getElementById('mc-fields').style.display = type === 'MC' ? '' : 'none';
     document.getElementById('numeric-fields').style.display = type === 'NUMERIC' ? '' : 'none';
 }
+// Convert <br> to newlines in context textarea for easier editing
+var ctxEl = document.getElementById('ctxEditText');
+if (ctxEl) ctxEl.value = ctxEl.value.replace(/<br\s*\/?>/gi, '\n');
 </script>
 {% endblock %}
