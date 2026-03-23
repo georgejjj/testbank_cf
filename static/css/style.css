@@ -569,3 +569,12 @@ a:hover { color: var(--gold); }
   .stat-card .stat-value { font-size: 1.5rem; }
   h2 { font-size: 1.4rem; }
 }
+
+/* Clickable images in content areas */
+.card-body img, .alert img, .bg-light img, .question-text img {
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.card-body img:hover, .alert img:hover, .bg-light img:hover, .question-text img:hover {
+  opacity: 0.8;
+}

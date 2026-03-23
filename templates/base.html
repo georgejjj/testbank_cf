@@ -201,6 +201,24 @@
     });
   </script>
 
+  <!-- Image lightbox -->
+  <div id="imgLightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:zoom-out;align-items:center;justify-content:center;" onclick="this.style.display='none'">
+    <img id="imgLightboxSrc" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.5);">
+  </div>
+  <script>
+  document.addEventListener('click', function(e) {
+    var img = e.target.closest('.card-body img, .alert img, .bg-light img, .question-text img');
+    if (img) {
+      e.preventDefault();
+      document.getElementById('imgLightboxSrc').src = img.src;
+      document.getElementById('imgLightbox').style.display = 'flex';
+    }
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('imgLightbox').style.display = 'none';
+  });
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>
