@@ -129,6 +129,7 @@ def parse_docx(docx_path):
     context_question_numbers = set()  # Track which question numbers belong to current context
     context_ending = False  # Set True at Skill:, cleared if next line is a question (keeps group going)
     state = 'IDLE'
+    pre_table_state = 'IDLE'
     table_lines = []
 
     for line in text_runs:
@@ -207,14 +208,21 @@ def parse_docx(docx_path):
 
         # --- Table marker ---
         if line_stripped == '[TABLE_START]':
+            pre_table_state = state
             state = 'TABLE'
             table_lines = []
             continue
         if line_stripped == '[TABLE_END]':
-            if current_context and context_is_fresh:
-                table_html = _table_lines_to_html(table_lines)
+            table_html = _table_lines_to_html(table_lines)
+            if pre_table_state == 'CONTEXT' and current_context and context_is_fresh:
                 current_context['text'] += '\n' + table_html
-                state = 'CONTEXT'  # Stay in CONTEXT so continuation text is captured
+                state = 'CONTEXT'
+            elif pre_table_state in ('ANSWER', 'QUESTION') and current_question:
+                if pre_table_state == 'ANSWER':
+                    current_question['answer_raw_text'] += '\n' + table_html
+                else:
+                    current_question['text'] += '\n' + table_html
+                state = pre_table_state
             else:
                 state = 'IDLE'
             continue
