@@ -19,14 +19,14 @@
             <span class="badge bg-secondary">Pending</span>
             {% endif %}
         </div>
-        <p class="mt-2">{{ r.answer.question_text_snapshot }}</p>
+        <div class="mt-2">{{ r.answer.question_text_snapshot|safe }}</div>
 
         {% if r.answer.question.question_type == 'MC' %}
             {% if r.answer.selected_choice %}
-            <p>Your answer: {{ r.answer.selected_choice.letter }}) {{ r.answer.selected_choice.text }}</p>
+            <p>Your answer: {{ r.answer.selected_choice.letter }}) {{ r.answer.selected_choice.text|safe }}</p>
             {% endif %}
             {% if r.correct_choice and r.answer.is_correct is False %}
-            <p class="text-success">Correct answer: {{ r.correct_choice.letter }}) {{ r.correct_choice.text }}</p>
+            <p class="text-success">Correct answer: {{ r.correct_choice.letter }}) {{ r.correct_choice.text|safe }}</p>
             {% endif %}
         {% elif r.answer.question.question_type == 'NUMERIC' %}
             <p>Your answer: {{ r.answer.numeric_answer }}</p>
@@ -34,6 +34,9 @@
             <p>Your answer: {{ r.answer.text_answer|truncatechars:200 }}</p>
         {% endif %}
 
+        {% if r.answer.question.answer_raw_text %}
+        <div class="alert alert-light mt-2"><strong>Answer:</strong> {{ r.answer.question.answer_raw_text|safe }}</div>
+        {% endif %}
         {% if r.answer.question.explanation %}
         <div class="alert alert-light mt-2"><strong>Explanation:</strong> {{ r.answer.question.explanation|safe }}</div>
         {% endif %}
