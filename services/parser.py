@@ -195,6 +195,9 @@ def parse_docx(docx_path):
             if not text_without_marker:
                 if current_context and state == 'CONTEXT':
                     current_context['image'] = img_name
+                elif current_question and state in ('ANSWER', 'EXPLANATION'):
+                    # Image after Answer: or Explanation: is part of the answer/explanation
+                    current_question['answer_image'] = img_name
                 elif current_question:
                     current_question['image'] = img_name
                 continue
@@ -390,6 +393,13 @@ def _save_question(question, result):
     if question and question.get('question_number'):
         if question['difficulty'] is None:
             question['difficulty'] = 1
+        # If answer has an image, append it to answer_raw_text
+        if question.get('answer_image'):
+            img_tag = f'[IMAGE:{question["answer_image"]}]'
+            if question['answer_raw_text']:
+                question['answer_raw_text'] += ' ' + img_tag
+            else:
+                question['answer_raw_text'] = img_tag
         result['questions'].append(question)
 
 
