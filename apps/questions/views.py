@@ -467,9 +467,11 @@ def questions_import_json(request):
                         },
                     )
                     if q_data.get('choices'):
-                        q.choices.all().delete()
                         for c in q_data['choices']:
-                            MCChoice.objects.create(question=q, letter=c['letter'], text=c['text'], is_correct=c['is_correct'])
+                            MCChoice.objects.update_or_create(
+                                question=q, letter=c['letter'],
+                                defaults={'text': c['text'], 'is_correct': c['is_correct']},
+                            )
                     if q_data.get('numeric_answer'):
                         NumericAnswer.objects.update_or_create(
                             question=q,
