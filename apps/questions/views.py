@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 
@@ -314,6 +315,13 @@ def questions_export(request):
 
     # Build JSON data
     image_paths = set()
+
+    def collect_inline_images(html_text):
+        """Extract image paths from <img src="/media/..."> tags."""
+        if html_text:
+            for m in re.finditer(r'<img[^>]+src="/media/([^"]+)"', html_text):
+                image_paths.add(m.group(1))
+
     data = {'chapters': []}
     for chapter in Chapter.objects.prefetch_related('sections__questions__choices', 'sections__questions__context_group').all():
         ch_data = {'number': chapter.number, 'title': chapter.title, 'textbook': chapter.textbook, 'sections': []}
@@ -333,10 +341,14 @@ def questions_export(request):
                 }
                 if q.image:
                     image_paths.add(q.image)
+                collect_inline_images(q.text)
+                collect_inline_images(q.explanation)
+                collect_inline_images(q.answer_raw_text)
                 if q.context_group:
-                    q_data['context'] = {'text': q.context_group.text, 'image': q.context_group.image}
+                    q_data['context'] = {'id': q.context_group.pk, 'text': q.context_group.text, 'image': q.context_group.image}
                     if q.context_group.image:
                         image_paths.add(q.context_group.image)
+                    collect_inline_images(q.context_group.text)
                 if q.question_type == 'MC':
                     q_data['choices'] = [{'letter': c.letter, 'text': c.text, 'is_correct': c.is_correct} for c in q.choices.all()]
                 if q.question_type == 'NUMERIC':
@@ -412,6 +424,8 @@ def questions_import_json(request):
         os.unlink(tmp_path)
 
         # Import questions from JSON data
+        # Map exported context group IDs to new ContextGroup objects
+        context_group_map = {}
         count = 0
         for ch_data in data.get('chapters', []):
             chapter, _ = Chapter.objects.update_or_create(
@@ -427,14 +441,16 @@ def questions_import_json(request):
                     context_group = None
                     if q_data.get('context'):
                         from .models import ContextGroup
-                        ctx_text = q_data['context']['text']
-                        existing = ContextGroup.objects.filter(text__startswith=ctx_text[:80]).first()
-                        if existing:
-                            context_group = existing
+                        ctx = q_data['context']
+                        ctx_id = ctx.get('id')
+                        if ctx_id and ctx_id in context_group_map:
+                            context_group = context_group_map[ctx_id]
                         else:
                             context_group = ContextGroup.objects.create(
-                                text=ctx_text, image=q_data['context'].get('image', ''), section=section,
+                                text=ctx['text'], image=ctx.get('image', ''), section=section,
                             )
+                            if ctx_id:
+                                context_group_map[ctx_id] = context_group
 
                     q, created = Question.objects.update_or_create(
                         section=section, question_number=q_data['question_number'],
