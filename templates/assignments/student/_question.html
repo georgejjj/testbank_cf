@@ -42,7 +42,7 @@
                  data-choice-id="{{ choice.id }}"
                  onclick="selectMC(this, {{ choice.id }});">
                 <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.display_letter }})</strong>
-                {{ choice.text }}
+                {{ choice.text|safe }}
             </div>
             {% endfor %}
 

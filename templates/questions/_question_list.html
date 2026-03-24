@@ -63,7 +63,7 @@
     <ul class="list-group list-group-flush mb-2">
       {% for choice in q.choices.all %}
       <li class="list-group-item py-1 {% if choice.is_correct %}text-success fw-bold{% endif %}">
-        <strong>{{ choice.letter }})</strong> {{ choice.text }}
+        <strong>{{ choice.letter }})</strong> {{ choice.text|safe }}
         {% if choice.is_correct %}
         <i class="bi bi-check-circle-fill text-success"></i>
         {% endif %}

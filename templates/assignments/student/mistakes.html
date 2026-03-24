@@ -63,7 +63,7 @@
                 {% for choice in me.question.choices.all %}
                 <div class="choice-option {% if choice.is_correct %}correct{% endif %}" style="cursor: default; padding: 0.5rem 0.85rem;">
                     <strong style="color: var(--navy-fade); margin-right: 0.5rem;">{{ choice.letter }})</strong>
-                    {{ choice.text }}
+                    {{ choice.text|safe }}
                     {% if choice.is_correct %}
                     <i class="bi bi-check-circle-fill text-success float-end mt-1"></i>
                     {% endif %}

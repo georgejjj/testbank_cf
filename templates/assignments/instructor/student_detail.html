@@ -39,7 +39,7 @@
                     <small class="text-muted d-block mb-1">Student's Answer:</small>
                     {% if r.answer.selected_choice %}
                     <div class="choice-option {% if r.answer.is_correct %}correct{% else %}incorrect{% endif %}" style="cursor:default;">
-                        <strong>{{ r.answer.selected_choice.letter }})</strong> {{ r.answer.selected_choice.text }}
+                        <strong>{{ r.answer.selected_choice.letter }})</strong> {{ r.answer.selected_choice.text|safe }}
                     </div>
                     {% else %}
                     <span class="text-muted">No answer</span>
@@ -49,7 +49,7 @@
                 <div class="col-md-6">
                     <small class="text-muted d-block mb-1">Correct Answer:</small>
                     <div class="choice-option correct" style="cursor:default;">
-                        <strong>{{ r.correct_choice.letter }})</strong> {{ r.correct_choice.text }}
+                        <strong>{{ r.correct_choice.letter }})</strong> {{ r.correct_choice.text|safe }}
                     </div>
                 </div>
                 {% endif %}
