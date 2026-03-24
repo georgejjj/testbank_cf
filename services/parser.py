@@ -17,7 +17,86 @@ NS = {
     'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
     'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture',
     'rel': 'http://schemas.openxmlformats.org/package/2006/relationships',
+    'm': 'http://schemas.openxmlformats.org/officeDocument/2006/math',
 }
+
+NS_M = 'http://schemas.openxmlformats.org/officeDocument/2006/math'
+
+
+def _omath_to_text(elem):
+    """Convert an oMath XML element to a readable text formula."""
+    tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+
+    if tag == 'sSup':
+        # Superscript: base^{exp}
+        base = elem.find(f'{{{NS_M}}}e')
+        sup = elem.find(f'{{{NS_M}}}sup')
+        base_text = _omath_children_text(base) if base is not None else ''
+        sup_text = _omath_children_text(sup) if sup is not None else ''
+        return f'{base_text}^{{{sup_text}}}'
+
+    if tag == 'sSub':
+        # Subscript: base_{sub}
+        base = elem.find(f'{{{NS_M}}}e')
+        sub = elem.find(f'{{{NS_M}}}sub')
+        base_text = _omath_children_text(base) if base is not None else ''
+        sub_text = _omath_children_text(sub) if sub is not None else ''
+        return f'{base_text}_{{{sub_text}}}'
+
+    if tag == 'f':
+        # Fraction: \frac{num}{den}
+        num = elem.find(f'{{{NS_M}}}num')
+        den = elem.find(f'{{{NS_M}}}den')
+        num_text = _omath_children_text(num) if num is not None else ''
+        den_text = _omath_children_text(den) if den is not None else ''
+        return f'\\frac{{{num_text}}}{{{den_text}}}'
+
+    if tag == 'rad':
+        # Radical: \sqrt{content}
+        e = elem.find(f'{{{NS_M}}}e')
+        e_text = _omath_children_text(e) if e is not None else ''
+        return f'\\sqrt{{{e_text}}}'
+
+    if tag == 'd':
+        # Delimiter (parentheses): (content)
+        e = elem.find(f'{{{NS_M}}}e')
+        e_text = _omath_children_text(e) if e is not None else ''
+        return f'({e_text})'
+
+    if tag == 'nary':
+        # N-ary (sum, product, etc.)
+        sub = elem.find(f'{{{NS_M}}}sub')
+        sup = elem.find(f'{{{NS_M}}}sup')
+        e = elem.find(f'{{{NS_M}}}e')
+        sub_text = _omath_children_text(sub) if sub is not None else ''
+        sup_text = _omath_children_text(sup) if sup is not None else ''
+        e_text = _omath_children_text(e) if e is not None else ''
+        return f'\\sum_{{{sub_text}}}^{{{sup_text}}} {e_text}'
+
+    if tag == 't':
+        return elem.text or ''
+
+    if tag == 'r':
+        # Math run — collect text
+        parts = []
+        for child in elem:
+            ctag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+            if ctag == 't' and child.text:
+                parts.append(child.text)
+        return ''.join(parts)
+
+    # For any other element, recurse into children
+    return _omath_children_text(elem)
+
+
+def _omath_children_text(elem):
+    """Concatenate text from all children of an oMath element."""
+    if elem is None:
+        return ''
+    parts = []
+    for child in elem:
+        parts.append(_omath_to_text(child))
+    return ''.join(parts)
 
 
 def extract_text_and_images(docx_path):
@@ -62,13 +141,14 @@ def extract_text_and_images(docx_path):
 
 
 def _extract_paragraph_text(para, text_runs, rels):
-    """Extract text and image markers from a paragraph element."""
+    """Extract text, image markers, and math from a paragraph element."""
     para_texts = []
-    for run in para.findall('.//w:r', NS):
+
+    def _process_run(run):
+        """Process a single w:r element."""
         # Check for image
         drawing = run.find('.//w:drawing', NS)
         if drawing is not None:
-            # Check for formula alt text (descr attribute on wp:docPr)
             doc_pr = drawing.find('.//wp:docPr', NS)
             descr = doc_pr.get('descr', '').strip() if doc_pr is not None else ''
 
@@ -79,7 +159,6 @@ def _extract_paragraph_text(para, text_runs, rels):
                     target = rels[embed_id]
                     img_name = target.split('/')[-1]
                     if descr:
-                        # Formula image — use alt text as formula marker
                         para_texts.append(f'[FORMULA:{descr}]')
                     else:
                         para_texts.append(f'[IMAGE:{img_name}]')
@@ -88,6 +167,28 @@ def _extract_paragraph_text(para, text_runs, rels):
         for t in run.findall('w:t', NS):
             if t.text:
                 para_texts.append(t.text)
+
+    # Walk direct children in order to preserve sequence of text and math
+    ns_w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+    for child in para:
+        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        if child.tag == f'{ns_w}r':
+            _process_run(child)
+        elif tag == 'oMath':
+            # Office Math element — convert to formula marker
+            formula_text = _omath_to_text(child)
+            if formula_text.strip():
+                para_texts.append(f'[FORMULA:{formula_text}]')
+        elif tag == 'oMathPara':
+            # Math paragraph — may contain oMath children
+            for omath in child.findall(f'{{{NS_M}}}oMath'):
+                formula_text = _omath_to_text(omath)
+                if formula_text.strip():
+                    para_texts.append(f'[FORMULA:{formula_text}]')
+        else:
+            # Recurse into other containers (e.g. hyperlinks) for w:r elements
+            for run in child.findall(f'{ns_w}r'):
+                _process_run(run)
 
     if para_texts:
         text_runs.append(''.join(para_texts))
