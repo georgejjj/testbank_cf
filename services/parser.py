@@ -68,13 +68,21 @@ def _extract_paragraph_text(para, text_runs, rels):
         # Check for image
         drawing = run.find('.//w:drawing', NS)
         if drawing is not None:
+            # Check for formula alt text (descr attribute on wp:docPr)
+            doc_pr = drawing.find('.//wp:docPr', NS)
+            descr = doc_pr.get('descr', '').strip() if doc_pr is not None else ''
+
             blip = drawing.find('.//' + '{http://schemas.openxmlformats.org/drawingml/2006/main}blip')
             if blip is not None:
                 embed_id = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
                 if embed_id and embed_id in rels:
                     target = rels[embed_id]
                     img_name = target.split('/')[-1]
-                    para_texts.append(f'[IMAGE:{img_name}]')
+                    if descr:
+                        # Formula image — use alt text as formula marker
+                        para_texts.append(f'[FORMULA:{descr}]')
+                    else:
+                        para_texts.append(f'[IMAGE:{img_name}]')
 
         # Extract text
         for t in run.findall('w:t', NS):

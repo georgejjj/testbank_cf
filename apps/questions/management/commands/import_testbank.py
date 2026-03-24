@@ -16,6 +16,37 @@ def _inline_images(text, chapter_number):
     )
 
 
+def _formula_to_latex(descr):
+    """Convert Word formula alt-text to LaTeX for MathJax."""
+    s = descr.strip()
+    # "with superscript (X)" → ^{X}
+    s = re.sub(r'\)\s*\)\s*with superscript\s*\(([^)]+)\)', r'))^{\1}', s)
+    s = re.sub(r'with superscript\s*\(([^)]+)\)', r'^{\1}', s)
+    # "square root of ((...))" → \sqrt{...}
+    s = re.sub(r'square root of\s*\(\(([^)]+)\)\)', r'\\sqrt{\1}', s)
+    s = re.sub(r'square root of\s*\(([^)]+)\)', r'\\sqrt{\1}', s)
+    # "sum of (...) from (n = 0) to (N)" → \sum_{n=0}^{N} ...
+    s = re.sub(
+        r'sum of\s*\((.+)\)\s*from\s*\(([^)]+)\)\s*to\s*\(([^)]+)\)',
+        r'\\sum_{\2}^{\3} \1',
+        s,
+    )
+    # )N or )n at end of parenthesized group → )^{N}  e.g. (1 + r)N
+    s = re.sub(r'\)([A-Za-z])\b', r')^{\1}', s)
+    s = re.sub(r'\)(\d+)\b', r')^{\1}', s)
+    # × → \times
+    s = s.replace('×', '\\times ')
+    return s
+
+
+def _inline_formulas(text):
+    """Convert [FORMULA:...] markers in text to MathJax spans."""
+    def replace_formula(m):
+        latex = _formula_to_latex(m.group(1))
+        return f'\\({latex}\\)'
+    return re.sub(r'\[FORMULA:([^\]]+)\]', replace_formula, text)
+
+
 class Command(BaseCommand):
     help = 'Import questions from a testbank .docx file'
 
@@ -110,7 +141,7 @@ class Command(BaseCommand):
                     if ctx_image:
                         ctx_image = f'questions/ch{chapter.number}/{ctx_image}'
                     context_group = ContextGroup.objects.create(
-                        text=ctx_text,
+                        text=_inline_formulas(ctx_text),
                         image=ctx_image,
                         section=section,
                     )
@@ -128,13 +159,13 @@ class Command(BaseCommand):
             ch_num = chapter.number
             defaults = {
                 'question_type': q_type,
-                'text': _inline_images(q_data['text'], ch_num),
+                'text': _inline_formulas(_inline_images(q_data['text'], ch_num)),
                 'difficulty': q_data.get('difficulty', 1),
                 'skill': q_data.get('skill', 'Conceptual'),
-                'explanation': _inline_images(q_data.get('explanation', ''), ch_num),
+                'explanation': _inline_formulas(_inline_images(q_data.get('explanation', ''), ch_num)),
                 'image': image_path,
                 'context_group': context_group,
-                'answer_raw_text': _inline_images(q_data.get('answer_raw_text', ''), ch_num),
+                'answer_raw_text': _inline_formulas(_inline_images(q_data.get('answer_raw_text', ''), ch_num)),
             }
             # Only assign global_number for new questions — preserve existing UIDs
             existing_q = Question.objects.filter(
@@ -158,7 +189,7 @@ class Command(BaseCommand):
                     MCChoice.objects.create(
                         question=question,
                         letter=choice_data['letter'],
-                        text=choice_data['text'],
+                        text=_inline_formulas(_inline_images(choice_data['text'], ch_num)),
                         is_correct=(choice_data['letter'] == correct_letter),
                     )
 
