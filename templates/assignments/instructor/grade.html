@@ -9,6 +9,20 @@
   <span class="badge bg-warning text-dark fs-6">{{ ungraded|length }} remaining</span>
 </div>
 
+{% if assignments %}
+<div class="mb-4">
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="form-label mb-0 fw-semibold">Assignment:</label>
+    <select name="assignment" class="form-select form-select-sm" style="max-width: 350px;" onchange="this.form.submit()">
+      <option value="">All assignments</option>
+      {% for a in assignments %}
+      <option value="{{ a.id }}" {% if selected_assignment == a.id|stringformat:"d" %}selected{% endif %}>{{ a.title }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+{% endif %}
+
 {% if not ungraded %}
 <div class="alert alert-success">
   <i class="bi bi-check-circle-fill"></i>
@@ -81,6 +95,7 @@
     <form method="post" action="{% url 'grade_free_response' %}">
       {% csrf_token %}
       <input type="hidden" name="answer_id" value="{{ answer.pk }}">
+      <input type="hidden" name="assignment_id" value="{{ selected_assignment }}">
 
       <div class="mb-3">
         <label for="feedback_{{ answer.pk }}" class="form-label fw-semibold">Feedback</label>

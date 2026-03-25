@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Avg, Count, Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
@@ -326,14 +327,36 @@ def grade_free_response(request):
         answer.save()
         recompute_score(answer.student_assignment)
         messages.success(request, 'Answer graded.')
-        return redirect('grade_free_response')
+        # Preserve assignment filter on redirect
+        assignment_id = request.POST.get('assignment_id', '')
+        url = reverse('grade_free_response')
+        if assignment_id:
+            url += f'?assignment={assignment_id}'
+        return redirect(url)
 
     ungraded = StudentAnswer.objects.filter(
         question__question_type__in=['FREE_RESPONSE', 'NUMERIC'],
         is_correct__isnull=True,
     ).exclude(
         text_answer='', numeric_answer__isnull=True,
-    ).select_related('student_assignment__student', 'question')
+    ).select_related('student_assignment__student', 'student_assignment__assignment', 'question')
+
+    # Filter by assignment if selected
+    selected_assignment = request.GET.get('assignment', '')
+    if selected_assignment:
+        ungraded = ungraded.filter(student_assignment__assignment_id=selected_assignment)
+
+    # Get assignments that have ungraded answers for the dropdown
+    all_ungraded = StudentAnswer.objects.filter(
+        question__question_type__in=['FREE_RESPONSE', 'NUMERIC'],
+        is_correct__isnull=True,
+    ).exclude(
+        text_answer='', numeric_answer__isnull=True,
+    )
+    assignment_ids = all_ungraded.values_list(
+        'student_assignment__assignment_id', flat=True
+    ).distinct()
+    assignments_with_ungraded = Assignment.objects.filter(id__in=assignment_ids).order_by('-created_at')
 
     # Compute auto-grade suggestion for numeric answers
     from services.grader import grade_numeric, parse_numeric_input
@@ -348,7 +371,11 @@ def grade_free_response(request):
             except Exception:
                 pass
 
-    return render(request, 'assignments/instructor/grade.html', {'ungraded': ungraded})
+    return render(request, 'assignments/instructor/grade.html', {
+        'ungraded': ungraded,
+        'assignments': assignments_with_ungraded,
+        'selected_assignment': selected_assignment,
+    })
 
 
 # ---- Student Views ----
