@@ -34,7 +34,7 @@
         </div>
         {% endif %}
 
-        <p class="question-text">{{ question.text }}</p>
+        <p class="question-text">{{ question.text|safe }}</p>
 
         {% if question.question_type == 'MC' %}
             {% for choice in choices %}

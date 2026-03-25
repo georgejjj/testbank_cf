@@ -57,7 +57,7 @@
     </div>
     {% endif %}
 
-    <p class="card-text">{{ q.text }}</p>
+    <p class="card-text">{{ q.text|safe }}</p>
 
     {% if q.question_type == "MC" %}
     <ul class="list-group list-group-flush mb-2">

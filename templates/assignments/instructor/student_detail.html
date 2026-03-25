@@ -31,7 +31,7 @@
         {% endif %}
     </div>
     <div class="card-body">
-        <p class="question-text">{{ r.answer.question.text }}</p>
+        <p class="question-text">{{ r.answer.question.text|safe }}</p>
 
         {% if r.answer.question.question_type == 'MC' %}
             <div class="row">
