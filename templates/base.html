@@ -29,6 +29,7 @@
 
   <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>document.addEventListener('htmx:afterSwap', function(){ if(window.MathJax) MathJax.typeset(); });</script>
 
   {% block extra_css %}{% endblock %}
 </head>
