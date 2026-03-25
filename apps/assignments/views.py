@@ -31,7 +31,9 @@ def instructor_dashboard(request):
     if not request.user.is_staff_role:
         return redirect('student_dashboard')
 
-    assignments = Assignment.objects.all().annotate(
+    assignments = Assignment.objects.exclude(
+        created_by__role='STUDENT',
+    ).annotate(
         student_count=Count('student_assignments'),
         completed_count=Count('student_assignments', filter=Q(student_assignments__status='COMPLETED')),
         avg_score=Avg('student_assignments__score'),
@@ -39,7 +41,7 @@ def instructor_dashboard(request):
     total_students = User.objects.filter(role='STUDENT').count()
 
     # Score distribution for most recent published assignment
-    latest = Assignment.objects.filter(is_published=True).first()
+    latest = Assignment.objects.filter(is_published=True).exclude(created_by__role='STUDENT').first()
     score_distribution = []
     if latest:
         sas = latest.student_assignments.filter(status='COMPLETED')
