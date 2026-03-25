@@ -75,6 +75,7 @@
           <li class="nav-item">
             <a class="nav-link" href="{% url 'instructor_messages' %}">
               <i class="bi bi-envelope me-1"></i>Messages
+              {% if unread_msg_count %}<span class="badge rounded-pill" style="background:var(--gold);color:var(--navy);font-size:0.7rem;">{{ unread_msg_count }}</span>{% endif %}
             </a>
           </li>
           {% elif user.is_ta %}
@@ -117,8 +118,9 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'student_messages' %}">
+            <a class="nav-link" href="{% url 'student_messages' %}?tab=inbox">
               <i class="bi bi-envelope me-1"></i>Messages
+              {% if unread_msg_count %}<span class="badge rounded-pill" style="background:var(--gold);color:var(--navy);font-size:0.7rem;">{{ unread_msg_count }}</span>{% endif %}
             </a>
           </li>
           {% endif %}

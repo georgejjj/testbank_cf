@@ -104,9 +104,14 @@ class MistakeEntry(models.Model):
 
 
 class Message(models.Model):
+    TYPE_CHOICES = [('DM', 'Direct Message'), ('REPLY', 'Reply'), ('ANNOUNCEMENT', 'Announcement')]
+
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
+    message_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default='DM')
     subject = models.CharField(max_length=200)
     body = models.TextField()
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -115,6 +120,3 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender}: {self.subject[:40]}"
-
-    def __str__(self):
-        return f"Mistake: {self.student} - Q{self.question.question_number}"

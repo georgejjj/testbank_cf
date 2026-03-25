@@ -822,7 +822,7 @@ def student_analytics(request):
 
 @login_required
 def student_messages(request):
-    """Student: send messages and see own message history."""
+    """Student: send messages and see inbox (replies + announcements)."""
     if not request.user.is_student:
         return redirect('instructor_dashboard')
 
@@ -830,31 +830,100 @@ def student_messages(request):
         subject = request.POST.get('subject', '').strip()
         body = request.POST.get('body', '').strip()
         if subject and body:
-            Message.objects.create(sender=request.user, subject=subject, body=body)
+            Message.objects.create(
+                sender=request.user, subject=subject, body=body,
+                message_type='DM',
+            )
             messages.success(request, 'Message sent to instructor.')
         else:
             messages.error(request, 'Please fill in both subject and message.')
         return redirect('student_messages')
 
-    my_messages = Message.objects.filter(sender=request.user).order_by('-created_at')
-    return render(request, 'assignments/student/messages.html', {'my_messages': my_messages})
+    # Sent messages + replies to them
+    sent = Message.objects.filter(
+        sender=request.user, message_type='DM',
+    ).prefetch_related('replies__sender')
+
+    # Messages received: replies to my DMs + announcements
+    inbox = Message.objects.filter(
+        models.Q(recipient=request.user, message_type='REPLY') |
+        models.Q(message_type='ANNOUNCEMENT')
+    ).select_related('sender').order_by('-created_at')
+
+    unread_count = inbox.filter(is_read=False).count()
+
+    # Mark inbox messages as read when viewing
+    if request.GET.get('tab') == 'inbox':
+        inbox.filter(is_read=False).update(is_read=True)
+        unread_count = 0
+
+    return render(request, 'assignments/student/messages.html', {
+        'sent': sent,
+        'inbox': inbox,
+        'unread_count': unread_count,
+        'active_tab': request.GET.get('tab', 'inbox'),
+    })
 
 
 @login_required
 def instructor_messages(request):
-    """Instructor: view all student messages."""
+    """Instructor: view student messages, reply, send announcements."""
     if not request.user.is_instructor:
         return redirect('student_dashboard')
 
-    if request.method == 'POST' and request.POST.get('mark_read'):
-        msg_id = request.POST.get('message_id')
-        Message.objects.filter(id=msg_id).update(is_read=True)
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        if action == 'reply':
+            parent_id = request.POST.get('parent_id')
+            body = request.POST.get('body', '').strip()
+            parent = get_object_or_404(Message, id=parent_id)
+            if body:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=parent.sender,
+                    subject=f'Re: {parent.subject}',
+                    body=body,
+                    message_type='REPLY',
+                    parent=parent,
+                )
+                parent.is_read = True
+                parent.save(update_fields=['is_read'])
+                messages.success(request, f'Reply sent to {parent.sender.get_full_name() or parent.sender.username}.')
+
+        elif action == 'announce':
+            subject = request.POST.get('subject', '').strip()
+            body = request.POST.get('body', '').strip()
+            if subject and body:
+                Message.objects.create(
+                    sender=request.user,
+                    subject=subject,
+                    body=body,
+                    message_type='ANNOUNCEMENT',
+                )
+                messages.success(request, 'Announcement sent to all students.')
+            else:
+                messages.error(request, 'Please fill in both subject and message.')
+
+        elif action == 'mark_read':
+            msg_id = request.POST.get('message_id')
+            Message.objects.filter(id=msg_id).update(is_read=True)
+
         return redirect('instructor_messages')
 
-    all_messages = Message.objects.select_related('sender').order_by('-created_at')
-    unread_count = all_messages.filter(is_read=False).count()
+    student_messages_qs = Message.objects.filter(
+        message_type='DM',
+    ).select_related('sender').prefetch_related('replies__sender').order_by('-created_at')
+
+    announcements = Message.objects.filter(
+        message_type='ANNOUNCEMENT',
+    ).select_related('sender').order_by('-created_at')
+
+    unread_count = student_messages_qs.filter(is_read=False).count()
 
     return render(request, 'assignments/instructor/messages.html', {
-        'all_messages': all_messages,
+        'student_messages': student_messages_qs,
+        'announcements': announcements,
         'unread_count': unread_count,
+        'active_tab': request.GET.get('tab', 'messages'),
     })
