@@ -7,10 +7,12 @@
 </div>
 
 {% for r in results %}
-<div class="card mb-2">
+<div class="card mb-3">
     <div class="card-body">
-        <div class="d-flex justify-content-between">
-            <span>{{ r.answer.question.uid }}</span>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold">{{ r.answer.question.uid }}
+                <span class="badge bg-light text-dark" style="font-size:0.7rem;">{{ r.answer.question.get_question_type_display }}</span>
+            </span>
             {% if r.answer.is_correct %}
             <span class="badge bg-success">Correct</span>
             {% elif r.answer.is_correct is False %}
@@ -19,34 +21,71 @@
             <span class="badge bg-secondary">Pending</span>
             {% endif %}
         </div>
-        <div class="mt-2">{{ r.answer.question_text_snapshot|safe }}</div>
+
+        {% if r.answer.question.context_group and r.answer.question.context_group.text|length > 60 %}
+        <div class="context-block mb-2">
+            <div class="context-label">Reference Info</div>
+            {{ r.answer.question.context_group.text|safe }}
+        </div>
+        {% endif %}
+
+        {% if r.answer.question.image %}
+        <img src="/media/{{ r.answer.question.image }}" class="img-fluid rounded mb-2" style="max-height:200px;">
+        {% endif %}
+
+        <p class="question-text">{{ r.answer.question.text|safe }}</p>
 
         {% if r.answer.question.question_type == 'MC' %}
-            {% if r.answer.selected_choice %}
-            <p>Your answer: {{ r.answer.selected_choice.letter }}) {{ r.answer.selected_choice.text|safe }}</p>
-            {% endif %}
-            {% if r.correct_choice and r.answer.is_correct is False %}
-            <p class="text-success">Correct answer: {{ r.correct_choice.letter }}) {{ r.correct_choice.text|safe }}</p>
-            {% endif %}
+        <div class="mb-2">
+            {% for choice in r.answer.question.choices.all %}
+            <div class="choice-option {% if choice.is_correct %}correct{% elif r.answer.selected_choice_id == choice.id and not r.answer.is_correct %}incorrect{% endif %}"
+                 style="cursor:default; padding: 0.5rem 0.85rem;">
+                <strong style="margin-right: 0.5rem;">{{ choice.letter }})</strong>
+                {{ choice.text|safe }}
+                {% if r.answer.selected_choice_id == choice.id %}
+                <span class="float-end">
+                    {% if r.answer.is_correct %}
+                    <i class="bi bi-check-circle-fill text-success"></i> Your answer
+                    {% else %}
+                    <i class="bi bi-x-circle-fill text-danger"></i> Your answer
+                    {% endif %}
+                </span>
+                {% endif %}
+                {% if choice.is_correct and r.answer.selected_choice_id != choice.id %}
+                <span class="float-end text-success">
+                    <i class="bi bi-check-circle-fill"></i> Correct
+                </span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
         {% elif r.answer.question.question_type == 'NUMERIC' %}
-            <p>Your answer: {{ r.answer.numeric_answer }}</p>
+        <p><strong>Your answer:</strong> {{ r.answer.numeric_answer|default:"No answer" }}</p>
         {% else %}
-            <p>Your answer: {{ r.answer.text_answer|truncatechars:200 }}</p>
+        <p><strong>Your answer:</strong> {{ r.answer.text_answer|truncatechars:200 }}</p>
         {% endif %}
 
         {% if r.answer.question.answer_raw_text %}
-        <div class="alert alert-light mt-2"><strong>Answer:</strong> {{ r.answer.question.answer_raw_text|safe }}</div>
+        <div class="context-block mt-2">
+            <div class="context-label">Answer</div>
+            {{ r.answer.question.answer_raw_text|safe }}
+        </div>
         {% endif %}
         {% if r.answer.question.explanation %}
-        <div class="alert alert-light mt-2"><strong>Explanation:</strong> {{ r.answer.question.explanation|safe }}</div>
+        <div class="context-block mt-2">
+            <div class="context-label">Explanation</div>
+            {{ r.answer.question.explanation|safe }}
+        </div>
         {% endif %}
         {% if r.answer.instructor_feedback %}
-        <div class="alert alert-info mt-2"><strong>Feedback:</strong> {{ r.answer.instructor_feedback }}</div>
+        <div class="alert alert-info mt-2 mb-0"><strong>Instructor Feedback:</strong> {{ r.answer.instructor_feedback }}</div>
         {% endif %}
     </div>
 </div>
 {% endfor %}
-{% if user.is_instructor %}
+
+{% if user.is_instructor or user.is_ta %}
 <a href="{% url 'instructor_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
 {% else %}
 <a href="{% url 'student_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>

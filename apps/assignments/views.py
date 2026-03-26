@@ -585,8 +585,8 @@ def assignment_result(request, sa_pk):
     sa = get_object_or_404(StudentAssignment, pk=sa_pk, student=request.user)
 
     answers = sa.answers.select_related(
-        'question', 'selected_choice'
-    ).order_by('question__question_number')
+        'question__context_group', 'selected_choice'
+    ).prefetch_related('question__choices').order_by('question__question_number')
 
     results = []
     for ans in answers:
