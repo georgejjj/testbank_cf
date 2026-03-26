@@ -80,6 +80,25 @@
         </div>
         {% endif %}
 
+        {% if r.answer.question.question_type != 'MC' %}
+        <div class="border-top pt-2 mt-3">
+            <form method="post" class="d-flex align-items-end gap-2 flex-wrap">
+                {% csrf_token %}
+                <input type="hidden" name="answer_id" value="{{ r.answer.pk }}">
+                <div class="flex-grow-1" style="min-width:200px;">
+                    <label class="form-label small text-muted mb-0">Feedback</label>
+                    <input type="text" name="feedback" class="form-control form-control-sm" value="{{ r.answer.instructor_feedback|default:'' }}" placeholder="Optional feedback...">
+                </div>
+                <button type="submit" name="regrade" value="correct" class="btn btn-sm {% if r.answer.is_correct %}btn-success{% else %}btn-outline-success{% endif %}">
+                    <i class="bi bi-check-lg me-1"></i>Correct
+                </button>
+                <button type="submit" name="regrade" value="incorrect" class="btn btn-sm {% if r.answer.is_correct is False %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                    <i class="bi bi-x-lg me-1"></i>Incorrect
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
         <div class="text-muted small mt-2">
             <i class="bi bi-clock me-1"></i>Time: {{ r.answer.server_elapsed_seconds }}s
         </div>

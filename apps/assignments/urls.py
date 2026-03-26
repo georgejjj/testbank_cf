@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:pk>/detail/', views.assignment_detail, name='assignment_detail'),
     path('student/<int:sa_pk>/', views.student_detail, name='student_detail'),
     path('grade/', views.grade_free_response, name='grade_free_response'),
+    path('export-grades/', views.export_grades, name='export_grades'),
 
     # Student
     path('dashboard/', views.student_dashboard, name='student_dashboard'),

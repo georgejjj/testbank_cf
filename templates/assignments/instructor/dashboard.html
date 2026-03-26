@@ -6,11 +6,16 @@
         <h2>{% if user.is_ta %}TA{% else %}Instructor{% endif %} Dashboard</h2>
         <p class="page-subtitle">{{ total_students }} student{{ total_students|pluralize }} enrolled</p>
     </div>
-    {% if user.is_instructor %}
-    <a href="{% url 'assignment_create' %}" class="btn btn-gold">
-        <i class="bi bi-plus-lg me-1"></i>Create Assignment
-    </a>
-    {% endif %}
+    <div class="d-flex gap-2">
+        <a href="{% url 'export_grades' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i>Export Grades
+        </a>
+        {% if user.is_instructor %}
+        <a href="{% url 'assignment_create' %}" class="btn btn-gold">
+            <i class="bi bi-plus-lg me-1"></i>Create Assignment
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Assignments Table -->

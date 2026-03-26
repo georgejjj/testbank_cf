@@ -292,6 +292,20 @@ def student_detail(request, sa_pk):
         return redirect('student_dashboard')
 
     sa = get_object_or_404(StudentAssignment, pk=sa_pk)
+
+    if request.method == 'POST' and request.POST.get('regrade'):
+        answer_id = request.POST.get('answer_id')
+        grade_value = request.POST.get('regrade')
+        feedback = request.POST.get('feedback', '').strip()
+        answer = get_object_or_404(StudentAnswer, id=answer_id, student_assignment=sa)
+        answer.is_correct = (grade_value == 'correct')
+        if feedback:
+            answer.instructor_feedback = feedback
+        answer.save()
+        recompute_score(sa)
+        messages.success(request, f'Answer re-graded as {"correct" if answer.is_correct else "incorrect"}.')
+        return redirect('student_detail', sa_pk=sa_pk)
+
     answers = sa.answers.select_related(
         'question', 'selected_choice'
     ).order_by('question__global_number')
@@ -927,3 +941,57 @@ def instructor_messages(request):
         'unread_count': unread_count,
         'active_tab': request.GET.get('tab', 'messages'),
     })
+
+
+# ---- Export Grades ----
+
+@login_required
+def export_grades(request):
+    """Export grading sheet as CSV for all students and completed assignments."""
+    if not request.user.is_staff_role:
+        return redirect('student_dashboard')
+
+    import csv
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="grades.csv"'
+    writer = csv.writer(response)
+
+    # Get all instructor-created assignments (exclude student practice)
+    assignments = Assignment.objects.exclude(
+        created_by__role='STUDENT'
+    ).order_by('created_at')
+
+    # Header row
+    header = ['Student ID', 'Username', 'Full Name']
+    for a in assignments:
+        header.append(f'{a.title} (/{a.num_questions})')
+    header.append('Total Score')
+    header.append('Total Possible')
+    header.append('Percentage')
+    writer.writerow(header)
+
+    # Data rows
+    students = User.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
+    for student in students:
+        row = [student.student_id, student.username, student.get_full_name()]
+        total_score = 0
+        total_possible = 0
+        for a in assignments:
+            sa = StudentAssignment.objects.filter(
+                student=student, assignment=a, status='COMPLETED'
+            ).first()
+            if sa and sa.score is not None:
+                row.append(sa.score)
+                total_score += sa.score
+                total_possible += sa.max_score
+            else:
+                row.append('')
+                total_possible += a.num_questions
+        row.append(total_score)
+        row.append(total_possible)
+        row.append(f'{total_score / total_possible * 100:.1f}%' if total_possible > 0 else '')
+        writer.writerow(row)
+
+    return response
