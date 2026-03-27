@@ -264,6 +264,10 @@ def assignment_preview(request, pk):
         return redirect('student_dashboard')
 
     assignment = get_object_or_404(Assignment, pk=pk, created_by=request.user)
+    # Delete any previous preview so we always get fresh questions
+    StudentAssignment.objects.filter(
+        student=request.user, assignment=assignment,
+    ).delete()
     sa = assign_questions_to_student(assignment, request.user)
 
     if sa.assigned_questions.count() == 0:
