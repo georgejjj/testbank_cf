@@ -353,6 +353,7 @@ def grade_free_response(request):
     ungraded = StudentAnswer.objects.filter(
         question__question_type__in=['FREE_RESPONSE', 'NUMERIC'],
         is_correct__isnull=True,
+        student_assignment__status='COMPLETED',
     ).exclude(
         text_answer='', numeric_answer__isnull=True,
     ).select_related('student_assignment__student', 'student_assignment__assignment', 'question')
@@ -366,6 +367,7 @@ def grade_free_response(request):
     all_ungraded = StudentAnswer.objects.filter(
         question__question_type__in=['FREE_RESPONSE', 'NUMERIC'],
         is_correct__isnull=True,
+        student_assignment__status='COMPLETED',
     ).exclude(
         text_answer='', numeric_answer__isnull=True,
     )
