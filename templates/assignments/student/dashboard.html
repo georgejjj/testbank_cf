@@ -48,7 +48,11 @@
         <div class="assignment-title">{{ sa.assignment.title }}</div>
         <div class="assignment-meta">
           {% if sa.assignment.due_date %}
-          <i class="bi bi-clock me-1"></i>Due {{ sa.assignment.due_date|date:"M d, g:i A" }}
+            {% if sa.assignment.due_date < now %}
+            <span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Past due {{ sa.assignment.due_date|date:"M d, g:i A" }}</span>
+            {% else %}
+            <i class="bi bi-clock me-1"></i>Due {{ sa.assignment.due_date|date:"M d, g:i A" }}
+            {% endif %}
           {% else %}
           <span>No deadline</span>
           {% endif %}

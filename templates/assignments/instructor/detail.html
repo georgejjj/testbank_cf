@@ -16,6 +16,27 @@
     </form>
 </div>
 
+<!-- Deadline Editor -->
+<div class="card mb-4">
+    <div class="card-body py-2 px-3">
+        <form method="post" action="{% url 'assignment_update_deadline' assignment.pk %}" class="d-flex align-items-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'assignment_detail' assignment.pk %}">
+            <label class="form-label mb-0 fw-semibold" style="white-space:nowrap;">
+                <i class="bi bi-calendar-event me-1"></i>Deadline
+            </label>
+            <input type="datetime-local" name="due_date" class="form-control form-control-sm" style="max-width:250px;"
+                   value="{{ assignment.due_date|date:'Y-m-d\TH:i'|default:'' }}">
+            <button type="submit" class="btn btn-primary btn-sm">Update</button>
+            {% if assignment.due_date %}
+            <span class="text-muted small">Currently: {{ assignment.due_date|date:"M d, Y g:i A" }}</span>
+            {% else %}
+            <span class="text-muted small">No deadline set</span>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
 <!-- Student Results Table -->
 <div class="card">
     <div class="card-header"><i class="bi bi-people me-2"></i>Student Results</div>
@@ -28,6 +49,7 @@
                     <th>Score</th>
                     <th>Started</th>
                     <th>Completed</th>
+                    <th>Late</th>
                     <th class="text-end">Details</th>
                 </tr>
             </thead>
@@ -50,6 +72,9 @@
                 </td>
                 <td>{% if sa.started_at %}{{ sa.started_at|date:"M d, g:i A" }}{% else %}&mdash;{% endif %}</td>
                 <td>{% if sa.completed_at %}{{ sa.completed_at|date:"M d, g:i A" }}{% else %}&mdash;{% endif %}</td>
+                <td>
+                    {% if sa.is_late %}<span class="badge bg-danger">Late</span>{% else %}&mdash;{% endif %}
+                </td>
                 <td class="text-end">
                     {% if sa.status != 'NOT_STARTED' %}
                     <a href="{% url 'student_detail' sa.pk %}" class="btn btn-outline-secondary btn-sm">
@@ -59,7 +84,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-4">No students assigned yet.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-4">No students assigned yet.</td></tr>
             {% endfor %}
             </tbody>
         </table>

@@ -4,6 +4,7 @@
 <h2>{{ sa.assignment.title }} - Results</h2>
 <div class="alert alert-{% if sa.score == sa.max_score %}success{% elif sa.score > 0 %}info{% else %}danger{% endif %}">
     Score: <strong>{{ sa.score }}/{{ sa.max_score }}</strong>
+    {% if sa.is_late %}<span class="badge bg-danger ms-2">Submitted Late</span>{% endif %}
 </div>
 
 {% for r in results %}

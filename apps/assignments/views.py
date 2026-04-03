@@ -24,6 +24,14 @@ from .models import (
 )
 
 
+def _check_late(sa):
+    """Mark a StudentAssignment as late if the deadline has passed."""
+    due = sa.assignment.due_date
+    if due and timezone.now() > due and not sa.is_late:
+        sa.is_late = True
+        sa.save(update_fields=['is_late'])
+
+
 # ---- Instructor Views ----
 
 @login_required
@@ -290,6 +298,19 @@ def assignment_detail(request, pk):
 
 
 @login_required
+def assignment_update_deadline(request, pk):
+    """Let instructor change the due date on a published assignment."""
+    if not request.user.is_instructor or request.method != 'POST':
+        return redirect('instructor_dashboard')
+    assignment = get_object_or_404(Assignment, pk=pk, created_by=request.user)
+    due_date = request.POST.get('due_date')
+    assignment.due_date = due_date or None
+    assignment.save(update_fields=['due_date'])
+    messages.success(request, f'Deadline updated for "{assignment.title}".')
+    return redirect(request.POST.get('next') or 'instructor_dashboard')
+
+
+@login_required
 def student_detail(request, sa_pk):
     """Instructor/TA view: see a specific student's answers for an assignment."""
     if not request.user.is_staff_role:
@@ -433,6 +454,7 @@ def student_dashboard(request):
         'total_completed': total_completed,
         'avg_score_pct': avg_score_pct,
         'mistake_count': mistake_count,
+        'now': timezone.now(),
     })
 
 
@@ -448,6 +470,7 @@ def assignment_list(request):
 
     return render(request, 'assignments/student/list.html', {
         'student_assignments': student_assignments,
+        'now': timezone.now(),
     })
 
 
@@ -462,6 +485,8 @@ def take_assignment(request, sa_pk):
         sa.status = 'IN_PROGRESS'
         sa.started_at = timezone.now()
         sa.save(update_fields=['status', 'started_at'])
+
+    _check_late(sa)
 
     assigned = AssignedQuestion.objects.filter(
         student_assignment=sa
@@ -503,6 +528,9 @@ def take_assignment(request, sa_pk):
         StudentAnswer.objects.filter(student_assignment=sa).values_list('question_id', flat=True)
     )
 
+    due = sa.assignment.due_date
+    is_past_due = bool(due and timezone.now() > due)
+
     context = {
         'sa': sa,
         'question': current_q,
@@ -514,6 +542,7 @@ def take_assignment(request, sa_pk):
         'questions': questions,
         'is_practice': sa.assignment.mode == 'PRACTICE',
         'accumulated_seconds': sa.total_time_seconds,
+        'is_past_due': is_past_due,
     }
 
     if request.headers.get('HX-Request'):
@@ -530,6 +559,8 @@ def submit_answer(request, sa_pk):
     sa = get_object_or_404(StudentAssignment, pk=sa_pk, student=request.user)
     if sa.status == 'COMPLETED':
         return HttpResponseForbidden('Assignment already completed.')
+
+    _check_late(sa)
 
     question_id = request.POST.get('question_id')
     question = get_object_or_404(Question, id=question_id)
@@ -587,6 +618,7 @@ def complete_assignment(request, sa_pk):
         return HttpResponseForbidden()
 
     sa = get_object_or_404(StudentAssignment, pk=sa_pk, student=request.user)
+    _check_late(sa)
     sa.status = 'COMPLETED'
     sa.completed_at = timezone.now()
     sa.save(update_fields=['status', 'completed_at'])

@@ -3,6 +3,13 @@
 {% block title %}{{ sa.assignment.title }} - TestBank{% endblock %}
 
 {% block content %}
+{% if is_past_due %}
+<div class="alert alert-warning py-2 mb-3" style="font-size:0.9rem;">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  The deadline for this assignment has passed. Your submission will be marked as <strong>late</strong>.
+</div>
+{% endif %}
+
 <div class="row g-3">
   <!-- Left Sidebar -->
   <div class="col-lg-2 mb-3">

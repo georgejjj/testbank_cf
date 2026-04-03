@@ -25,7 +25,11 @@
             <td>{{ sa.assignment.title }}</td>
             <td>
               {% if sa.assignment.due_date %}
+                {% if sa.status != 'COMPLETED' and sa.assignment.due_date < now %}
+                <span class="text-danger">{{ sa.assignment.due_date|date:"M d, Y g:i A" }}</span>
+                {% else %}
                 {{ sa.assignment.due_date|date:"M d, Y g:i A" }}
+                {% endif %}
               {% else %}
                 &mdash;
               {% endif %}
@@ -34,6 +38,9 @@
               <span class="badge bg-{% if sa.status == 'COMPLETED' %}success{% elif sa.status == 'IN_PROGRESS' %}warning text-dark{% else %}secondary{% endif %}">
                 {{ sa.get_status_display }}
               </span>
+              {% if sa.is_late %}
+              <span class="badge bg-danger ms-1">Late</span>
+              {% endif %}
             </td>
             <td>
               {% if sa.status == "COMPLETED" and sa.score is not None %}
