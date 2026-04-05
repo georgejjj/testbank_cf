@@ -1,16 +1,19 @@
+import csv
 import json
+from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
 from questions.models import Chapter, Question
+from services.analytics import compute_analytics
 from services.grader import grade_answer, recompute_score
 from services.randomizer import assign_questions_to_student
 
@@ -1037,17 +1040,104 @@ def export_grades(request):
 
 @login_required
 def instructor_analyze(request):
-    from django.http import HttpResponse
-    return HttpResponse('Analytics coming soon', status=200)
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    all_assignments = Assignment.objects.filter(
+        is_published=True, mode='ASSIGNMENT',
+    ).exclude(created_by__role='STUDENT').order_by('created_at')
+
+    all_students = User.objects.filter(role='STUDENT').order_by('last_name', 'first_name')
+
+    if request.method == 'POST':
+        selected_assignment_ids = request.POST.getlist('assignment_ids')
+        selected_student_ids = request.POST.getlist('student_ids')
+        selected_assignment_ids = [int(x) for x in selected_assignment_ids if x.isdigit()]
+        selected_student_ids = [int(x) for x in selected_student_ids if x.isdigit()]
+    else:
+        selected_assignment_ids = list(all_assignments.values_list('pk', flat=True))
+        selected_student_ids = list(all_students.values_list('pk', flat=True))
+
+    analytics = compute_analytics(selected_assignment_ids, selected_student_ids)
+
+    context = {
+        'all_assignments': all_assignments,
+        'all_students': all_students,
+        'selected_assignment_ids': selected_assignment_ids,
+        'selected_student_ids': selected_student_ids,
+        'analytics': analytics,
+        'distribution_json': json.dumps(analytics['distribution']),
+        'num_assignments': len(selected_assignment_ids),
+        'num_students': len(selected_student_ids),
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'assignments/instructor/analyze_content.html', context)
+
+    return render(request, 'assignments/instructor/analyze.html', context)
 
 
 @login_required
 def export_raw_scores(request):
-    from django.http import HttpResponse
-    return HttpResponse('Export coming soon', status=200)
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    assignment_ids = request.GET.getlist('a')
+    student_ids = request.GET.getlist('s')
+    assignment_ids = [int(x) for x in assignment_ids if x.isdigit()]
+    student_ids = [int(x) for x in student_ids if x.isdigit()]
+
+    assignments = Assignment.objects.filter(pk__in=assignment_ids).order_by('created_at')
+    students = User.objects.filter(pk__in=student_ids, role='STUDENT').order_by('last_name', 'first_name')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="raw_scores_{date.today()}.csv"'
+    writer = csv.writer(response)
+
+    header = ['Student'] + [a.title for a in assignments]
+    writer.writerow(header)
+
+    for student in students:
+        row = [student.get_full_name() or student.username]
+        for a in assignments:
+            sa = StudentAssignment.objects.filter(
+                student=student, assignment=a, status='COMPLETED',
+            ).first()
+            if sa and sa.score is not None:
+                row.append(f'{sa.score}/{sa.max_score}')
+            else:
+                row.append('\u2014')
+        writer.writerow(row)
+
+    return response
 
 
 @login_required
 def export_breakdown(request):
-    from django.http import HttpResponse
-    return HttpResponse('Export coming soon', status=200)
+    if not request.user.is_instructor:
+        return redirect('student_dashboard')
+
+    assignment_ids = request.GET.getlist('a')
+    student_ids = request.GET.getlist('s')
+    assignment_ids = [int(x) for x in assignment_ids if x.isdigit()]
+    student_ids = [int(x) for x in student_ids if x.isdigit()]
+
+    analytics = compute_analytics(assignment_ids, student_ids)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="student_breakdown_{date.today()}.csv"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Rank', 'Student', 'Completed', 'Avg Score %', 'Accuracy %', 'Avg Time (min)'])
+
+    for i, s in enumerate(analytics['student_breakdown'], 1):
+        writer.writerow([
+            i,
+            s['name'],
+            f"{s['completed']}/{s['total_assignments']}",
+            s['avg_score'],
+            s['accuracy'],
+            s['avg_time_min'],
+        ])
+
+    return response
