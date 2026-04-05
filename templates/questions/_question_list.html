@@ -40,7 +40,7 @@
     {% if q.context_group and q.context_group.text|length > 60 %}
     <div class="context-block mb-3" style="font-size: 0.88rem;">
       <div class="context-label">Context</div>
-      {{ q.context_group.text|truncatewords:40|safe }}
+      {{ q.context_group.text|truncatewords_html:40 }}
     </div>
     {% endif %}
     {% if q.context_group and q.context_group.image %}
