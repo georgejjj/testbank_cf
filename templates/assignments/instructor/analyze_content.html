@@ -1,0 +1,196 @@
+<!-- Summary Stats -->
+<div class="row g-3 mb-3">
+    <div class="col"><div class="card fade-in stat-card"><div class="stat-label">Mean</div><div class="stat-value">{{ analytics.summary.mean }}%</div></div></div>
+    <div class="col"><div class="card fade-in stat-card"><div class="stat-label">Median</div><div class="stat-value">{{ analytics.summary.median }}%</div></div></div>
+    <div class="col"><div class="card fade-in stat-card"><div class="stat-label">Std Dev</div><div class="stat-value">{{ analytics.summary.stdev }}</div></div></div>
+    <div class="col"><div class="card fade-in stat-card"><div class="stat-label">Pass Rate</div><div class="stat-value" style="color: var(--success);">{{ analytics.summary.pass_rate }}%</div></div></div>
+    <div class="col"><div class="card fade-in stat-card"><div class="stat-label">Avg Time</div><div class="stat-value">{{ analytics.summary.avg_time_min }}m</div></div></div>
+</div>
+
+<!-- Min/Max -->
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card fade-in">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                <span class="text-muted" style="font-size: 0.85rem;">Highest</span>
+                <span class="fw-600" style="color: var(--success);">{{ analytics.summary.highest.score }}% &mdash; {{ analytics.summary.highest.name }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card fade-in">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                <span class="text-muted" style="font-size: 0.85rem;">Lowest</span>
+                <span class="fw-600" style="color: var(--danger, #c0392b);">{{ analytics.summary.lowest.score }}% &mdash; {{ analytics.summary.lowest.name }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Distribution Chart -->
+<div class="card fade-in mb-3">
+    <div class="card-header">
+        <i class="bi bi-bar-chart me-2" style="color: var(--gold);"></i>Score Distribution
+        <small class="text-muted ms-2">{{ num_assignments }} assignment{{ num_assignments|pluralize }} &middot; {{ num_students }} student{{ num_students|pluralize }}</small>
+    </div>
+    <div class="card-body">
+        <canvas id="scoreDistChart" height="160"></canvas>
+    </div>
+</div>
+
+<!-- Student Breakdown (collapsible) -->
+<div class="card fade-in mb-3">
+    <div class="card-header collapse-header d-flex justify-content-between align-items-center"
+         data-bs-toggle="collapse" data-bs-target="#breakdownBody" aria-expanded="true">
+        <div>
+            <i class="bi bi-chevron-down collapse-icon me-1"></i>
+            <span>Student Breakdown</span>
+            <small class="text-muted ms-2">{{ analytics.student_breakdown|length }} student{{ analytics.student_breakdown|length|pluralize }}</small>
+        </div>
+        <div class="d-flex gap-2" onclick="event.stopPropagation();">
+            <a id="export-raw-link" href="#" class="btn btn-sm btn-navy">
+                <i class="bi bi-download me-1"></i>Export Raw Scores
+            </a>
+            <a id="export-breakdown-link" href="#" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-download me-1"></i>Export Breakdown
+            </a>
+        </div>
+    </div>
+    <div id="breakdownBody" class="collapse show">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th class="text-center">Completed</th>
+                        <th class="text-center">Avg Score</th>
+                        <th class="text-center">Accuracy</th>
+                        <th class="text-center">Avg Time</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in analytics.student_breakdown %}
+                <tr>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td class="fw-600">{{ s.name }}</td>
+                    <td class="text-center">{{ s.completed }}/{{ s.total_assignments }}</td>
+                    <td class="text-center fw-600 {% if s.avg_score >= 80 %}text-success{% elif s.avg_score < 60 %}text-danger{% endif %}">
+                        {{ s.avg_score }}%
+                    </td>
+                    <td class="text-center">{{ s.accuracy }}%</td>
+                    <td class="text-center">{{ s.avg_time_min }}m</td>
+                    <td>
+                        <div class="accuracy-bar">
+                            <div class="accuracy-bar-fill {% if s.avg_score >= 80 %}bg-success{% elif s.avg_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                 style="width: {{ s.avg_score }}%;"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-3">No completed assignments for this selection.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Weakest Sections -->
+<div class="card fade-in mb-3">
+    <div class="card-header"><i class="bi bi-exclamation-triangle me-2" style="color: var(--gold);"></i>Weakest Sections</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Section</th>
+                    <th>Topic</th>
+                    <th class="text-center">Attempts</th>
+                    <th class="text-center">Accuracy</th>
+                    <th style="width: 100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for sec in analytics.weakest_sections %}
+            <tr>
+                <td class="fw-600">&sect; {{ sec.section_number }}</td>
+                <td>{{ sec.title }}</td>
+                <td class="text-center">{{ sec.attempts }}</td>
+                <td class="text-center fw-600 {% if sec.accuracy < 50 %}text-danger{% elif sec.accuracy < 70 %}text-warning{% else %}text-success{% endif %}">
+                    {{ sec.accuracy }}%
+                </td>
+                <td>
+                    <div class="accuracy-bar">
+                        <div class="accuracy-bar-fill {% if sec.accuracy < 50 %}bg-danger{% elif sec.accuracy < 70 %}bg-warning{% else %}bg-success{% endif %}"
+                             style="width: {{ sec.accuracy }}%;"></div>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Not enough data yet (min. 5 attempts per section).</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Most-Missed Questions -->
+<div class="card fade-in mb-3">
+    <div class="card-header"><i class="bi bi-question-circle me-2" style="color: var(--gold);"></i>Most-Missed Questions</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>UID</th>
+                    <th>Question</th>
+                    <th class="text-center">Times Asked</th>
+                    <th class="text-center">Error Rate</th>
+                    <th>Section</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for q in analytics.most_missed %}
+            <tr>
+                <td><code>{{ q.uid }}</code></td>
+                <td>{{ q.text }}</td>
+                <td class="text-center">{{ q.times_asked }}</td>
+                <td class="text-center fw-600 {% if q.error_rate >= 70 %}text-danger{% elif q.error_rate >= 50 %}text-warning{% endif %}">
+                    {{ q.error_rate }}%
+                </td>
+                <td>&sect; {{ q.section }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Not enough data yet (min. 3 attempts per question).</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Re-render chart on each HTMX swap -->
+<script>
+(function() {
+    const dist = {{ distribution_json|safe }};
+    const canvas = document.getElementById('scoreDistChart');
+    if (canvas && dist.length) {
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'],
+                datasets: [{
+                    label: 'Students',
+                    data: dist,
+                    backgroundColor: dist.map((v, i) => i === 10 ? '#2d8a4e' : (v > 0 ? '#d4a843' : '#e9ecef')),
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    if (typeof updateExportLinks === 'function') updateExportLinks();
+})();
+</script>
