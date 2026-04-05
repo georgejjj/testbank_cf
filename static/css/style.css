@@ -198,6 +198,16 @@ a:hover { color: var(--gold); }
   transform: translateY(-1px);
   box-shadow: var(--shadow-gold);
 }
+.btn-navy {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+}
+.btn-navy:hover {
+  background: #243044;
+  color: #fff;
+}
 .btn-outline-secondary {
   border-color: var(--warm-border);
   color: var(--text-secondary);

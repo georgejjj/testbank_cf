@@ -14,6 +14,9 @@ urlpatterns = [
     path('student/<int:sa_pk>/', views.student_detail, name='student_detail'),
     path('grade/', views.grade_free_response, name='grade_free_response'),
     path('export-grades/', views.export_grades, name='export_grades'),
+    path('analyze/', views.instructor_analyze, name='instructor_analyze'),
+    path('analyze/export-raw/', views.export_raw_scores, name='export_raw_scores'),
+    path('analyze/export-breakdown/', views.export_breakdown, name='export_breakdown'),
 
     # Student
     path('dashboard/', views.student_dashboard, name='student_dashboard'),
