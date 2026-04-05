@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Analyze - TestBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-bar-chart-line me-2" style="color: var(--gold);"></i>Analyze</h2>
+    <p class="page-subtitle">Score analysis across assignments and students</p>
+</div>
+
+{% csrf_token %}
+
+<!-- Filters -->
+<div class="row g-3 mb-4">
+    <!-- Assignment Selector -->
+    <div class="col-md-6">
+        <div class="card fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-check me-2"></i>Assignments</span>
+                <div>
+                    <button type="button" class="btn btn-sm btn-gold" onclick="toggleAll('assignment')">All</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAll('assignment')">Clear</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2" id="assignment-pills">
+                    {% for a in all_assignments %}
+                    <button type="button"
+                            class="btn btn-sm rounded-pill filter-pill {% if a.pk in selected_assignment_ids %}active{% endif %}"
+                            data-filter="assignment" data-id="{{ a.pk }}">
+                        {{ a.title }}
+                    </button>
+                    {% empty %}
+                    <span class="text-muted">No published assignments yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Selector -->
+    <div class="col-md-6">
+        <div class="card fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people me-2"></i>Students</span>
+                <div>
+                    <button type="button" class="btn btn-sm btn-gold" onclick="toggleAll('student')">All ({{ all_students|length }})</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAll('student')">Clear</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <input type="text" class="form-control form-control-sm mb-2" placeholder="Search students..."
+                       id="student-search" oninput="filterStudents(this.value)">
+                <div class="d-flex flex-wrap gap-2" id="student-pills" style="max-height: 120px; overflow-y: auto;">
+                    {% for s in all_students %}
+                    <button type="button"
+                            class="btn btn-sm rounded-pill filter-pill {% if s.pk in selected_student_ids %}active{% endif %}"
+                            data-filter="student" data-id="{{ s.pk }}"
+                            data-name="{{ s.get_full_name|lower }}">
+                        {{ s.get_full_name|default:s.username }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Content (swapped by HTMX) -->
+<div id="analytics-content">
+    {% include "assignments/instructor/analyze_content.html" %}
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-pill {
+        background: var(--warm-bg);
+        color: var(--text-muted);
+        border: 1px solid #ddd;
+        transition: all 0.15s;
+    }
+    .filter-pill.active {
+        background: var(--navy);
+        color: #fff;
+        border-color: var(--navy);
+    }
+    .filter-pill:hover {
+        opacity: 0.85;
+    }
+    .stat-card {
+        text-align: center;
+        padding: 1rem;
+    }
+    .stat-card .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+    }
+    .stat-card .stat-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--navy);
+    }
+    .accuracy-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--warm-bg);
+    }
+    .accuracy-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+    .collapse-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    .collapse-header .collapse-icon {
+        transition: transform 0.2s;
+    }
+    .collapse-header.collapsed .collapse-icon {
+        transform: rotate(-90deg);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// --- Filter pill toggle ---
+document.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        refreshAnalytics();
+    });
+});
+
+function toggleAll(type) {
+    document.querySelectorAll('.filter-pill[data-filter="' + type + '"]').forEach(b => b.classList.add('active'));
+    refreshAnalytics();
+}
+
+function clearAll(type) {
+    document.querySelectorAll('.filter-pill[data-filter="' + type + '"]').forEach(b => b.classList.remove('active'));
+    refreshAnalytics();
+}
+
+function filterStudents(query) {
+    query = query.toLowerCase();
+    document.querySelectorAll('#student-pills .filter-pill').forEach(btn => {
+        btn.style.display = btn.dataset.name.includes(query) ? '' : 'none';
+    });
+}
+
+function getSelectedIds(type) {
+    return Array.from(document.querySelectorAll('.filter-pill[data-filter="' + type + '"].active'))
+        .map(b => b.dataset.id);
+}
+
+function refreshAnalytics() {
+    const assignmentIds = getSelectedIds('assignment');
+    const studentIds = getSelectedIds('student');
+
+    // Build a hidden form to POST via HTMX (supports duplicate keys)
+    const form = document.createElement('form');
+    assignmentIds.forEach(id => {
+        const input = document.createElement('input');
+        input.name = 'assignment_ids';
+        input.value = id;
+        form.appendChild(input);
+    });
+    studentIds.forEach(id => {
+        const input = document.createElement('input');
+        input.name = 'student_ids';
+        input.value = id;
+        form.appendChild(input);
+    });
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrf) {
+        const ci = document.createElement('input');
+        ci.name = 'csrfmiddlewaretoken';
+        ci.value = csrf.value;
+        form.appendChild(ci);
+    }
+
+    form.style.display = 'none';
+    form.setAttribute('hx-post', '{% url "instructor_analyze" %}');
+    form.setAttribute('hx-target', '#analytics-content');
+    form.setAttribute('hx-swap', 'innerHTML');
+    document.body.appendChild(form);
+    htmx.trigger(form, 'submit');
+    setTimeout(() => form.remove(), 100);
+
+    updateExportLinks();
+}
+
+function updateExportLinks() {
+    const assignmentIds = getSelectedIds('assignment');
+    const studentIds = getSelectedIds('student');
+    const params = new URLSearchParams();
+    assignmentIds.forEach(id => params.append('a', id));
+    studentIds.forEach(id => params.append('s', id));
+    const qs = params.toString();
+    const rawLink = document.getElementById('export-raw-link');
+    const breakdownLink = document.getElementById('export-breakdown-link');
+    if (rawLink) rawLink.href = '{% url "export_raw_scores" %}?' + qs;
+    if (breakdownLink) breakdownLink.href = '{% url "export_breakdown" %}?' + qs;
+}
+
+document.addEventListener('DOMContentLoaded', updateExportLinks);
+</script>
+{% endblock %}
