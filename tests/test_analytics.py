@@ -150,3 +150,78 @@ class AnalyticsServiceTest(TestCase):
         result = compute_analytics([], [self.student_a.pk])
         self.assertAlmostEqual(result['summary']['mean'], 0)
         self.assertEqual(result['distribution'], [0] * 11)
+
+
+from django.test import Client
+
+
+class AnalyzeViewTest(TestCase):
+    def setUp(self):
+        self.instructor = User.objects.create_user(
+            username='prof', password='pass', role='INSTRUCTOR',
+            must_change_password=False,
+        )
+        self.student = User.objects.create_user(
+            username='alice', password='pass', role='STUDENT',
+            first_name='Alice', last_name='Adams',
+            must_change_password=False,
+        )
+        self.ch = Chapter.objects.create(number=4, title='TVM')
+        self.sec = Section.objects.create(chapter=self.ch, number='4.1', title='Timeline', sort_order=1)
+        self.q = Question.objects.create(
+            section=self.sec, question_type='MC', text='Test Q',
+            difficulty=1, skill='Conceptual', question_number=1, global_number=1,
+        )
+        MCChoice.objects.create(question=self.q, letter='A', text='Right', is_correct=True)
+        self.a1 = Assignment.objects.create(
+            title='HW1', created_by=self.instructor, num_questions=1,
+            mode='ASSIGNMENT', is_published=True,
+        )
+        self.sa = StudentAssignment.objects.create(
+            student=self.student, assignment=self.a1,
+            status='COMPLETED', score=1, max_score=1, total_time_seconds=120,
+        )
+        AssignedQuestion.objects.create(student_assignment=self.sa, question=self.q, position=0)
+        StudentAnswer.objects.create(
+            student_assignment=self.sa, question=self.q, is_correct=True,
+        )
+        self.client = Client()
+
+    def test_analyze_page_loads(self):
+        self.client.login(username='prof', password='pass')
+        resp = self.client.get('/assignments/analyze/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Analyze')
+        self.assertContains(resp, 'HW1')
+
+    def test_analyze_htmx_post(self):
+        self.client.login(username='prof', password='pass')
+        resp = self.client.post(
+            '/assignments/analyze/',
+            {'assignment_ids': [self.a1.pk], 'student_ids': [self.student.pk]},
+            HTTP_HX_REQUEST='true',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '100')  # 1/1 = 100%
+
+    def test_analyze_student_forbidden(self):
+        self.client.login(username='alice', password='pass')
+        resp = self.client.get('/assignments/analyze/')
+        self.assertEqual(resp.status_code, 302)
+
+    def test_export_raw_csv(self):
+        self.client.login(username='prof', password='pass')
+        resp = self.client.get(f'/assignments/analyze/export-raw/?a={self.a1.pk}&s={self.student.pk}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv')
+        content = resp.content.decode()
+        self.assertIn('Alice Adams', content)
+        self.assertIn('1/1', content)
+
+    def test_export_breakdown_csv(self):
+        self.client.login(username='prof', password='pass')
+        resp = self.client.get(f'/assignments/analyze/export-breakdown/?a={self.a1.pk}&s={self.student.pk}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv')
+        content = resp.content.decode()
+        self.assertIn('Alice Adams', content)
