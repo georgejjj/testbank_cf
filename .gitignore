@@ -7,3 +7,4 @@ media/questions/
 .env
 *.docx
 *.docx:Zone.Identifier
+.superpowers/
