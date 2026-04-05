@@ -1033,3 +1033,21 @@ def export_grades(request):
         writer.writerow(row)
 
     return response
+
+
+@login_required
+def instructor_analyze(request):
+    from django.http import HttpResponse
+    return HttpResponse('Analytics coming soon', status=200)
+
+
+@login_required
+def export_raw_scores(request):
+    from django.http import HttpResponse
+    return HttpResponse('Export coming soon', status=200)
+
+
+@login_required
+def export_breakdown(request):
+    from django.http import HttpResponse
+    return HttpResponse('Export coming soon', status=200)
