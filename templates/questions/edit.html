@@ -48,28 +48,39 @@
                     <!-- MC Choices -->
                     <div id="mc-fields" {% if question.question_type != 'MC' %}style="display:none;"{% endif %}>
                         <label class="form-label">Choices (select correct answer)</label>
-                        {% for choice in choices %}
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="correct_choice" value="{{ choice.letter }}"
-                                       {% if choice.is_correct %}checked{% endif %}
-                                       class="form-check-input mt-0">
+                        <div id="choices-container">
+                            {% for choice in choices %}
+                            <div class="input-group mb-2 choice-row">
+                                <div class="input-group-text">
+                                    <input type="radio" name="correct_choice" value="{{ choice.letter }}"
+                                           {% if choice.is_correct %}checked{% endif %}
+                                           class="form-check-input mt-0">
+                                </div>
+                                <input type="text" name="choice_letter" class="form-control" value="{{ choice.letter }}" style="max-width: 50px;">
+                                <input type="text" name="choice_text" class="form-control" value="{{ choice.text }}">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeChoice(this)" title="Remove choice">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
                             </div>
-                            <input type="text" name="choice_letter" class="form-control" value="{{ choice.letter }}" style="max-width: 50px;">
-                            <input type="text" name="choice_text" class="form-control" value="{{ choice.text }}">
-                        </div>
-                        {% endfor %}
-                        {% if not choices %}
-                        {% for letter in "ABCD" %}
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="correct_choice" value="{{ letter }}" class="form-check-input mt-0">
+                            {% endfor %}
+                            {% if not choices %}
+                            {% for letter in "ABCD" %}
+                            <div class="input-group mb-2 choice-row">
+                                <div class="input-group-text">
+                                    <input type="radio" name="correct_choice" value="{{ letter }}" class="form-check-input mt-0">
+                                </div>
+                                <input type="text" name="choice_letter" class="form-control" value="{{ letter }}" style="max-width: 50px;">
+                                <input type="text" name="choice_text" class="form-control" placeholder="Choice text...">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeChoice(this)" title="Remove choice">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
                             </div>
-                            <input type="text" name="choice_letter" class="form-control" value="{{ letter }}" style="max-width: 50px;">
-                            <input type="text" name="choice_text" class="form-control" placeholder="Choice text...">
+                            {% endfor %}
+                            {% endif %}
                         </div>
-                        {% endfor %}
-                        {% endif %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-1" onclick="addChoice()">
+                            <i class="bi bi-plus-lg me-1"></i>Add Choice
+                        </button>
                     </div>
 
                     <!-- Numeric Answer -->
@@ -173,6 +184,39 @@ function toggleTypeFields() {
     document.getElementById('mc-fields').style.display = type === 'MC' ? '' : 'none';
     document.getElementById('numeric-fields').style.display = type === 'NUMERIC' ? '' : 'none';
 }
+
+function addChoice() {
+    var container = document.getElementById('choices-container');
+    var rows = container.querySelectorAll('.choice-row');
+    // Next letter: find the highest existing letter and increment
+    var nextLetter = String.fromCharCode(65 + rows.length);  // A=65
+    var row = document.createElement('div');
+    row.className = 'input-group mb-2 choice-row';
+    row.innerHTML =
+        '<div class="input-group-text">' +
+            '<input type="radio" name="correct_choice" value="' + nextLetter + '" class="form-check-input mt-0">' +
+        '</div>' +
+        '<input type="text" name="choice_letter" class="form-control" value="' + nextLetter + '" style="max-width: 50px;">' +
+        '<input type="text" name="choice_text" class="form-control" placeholder="Choice text...">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm" onclick="removeChoice(this)" title="Remove choice">' +
+            '<i class="bi bi-x-lg"></i>' +
+        '</button>';
+    container.appendChild(row);
+}
+
+function removeChoice(btn) {
+    var row = btn.closest('.choice-row');
+    var container = document.getElementById('choices-container');
+    if (container.querySelectorAll('.choice-row').length <= 2) {
+        alert('MC questions need at least 2 choices.');
+        return;
+    }
+    // If the removed choice was the correct one, uncheck it
+    var radio = row.querySelector('input[type="radio"]');
+    if (radio && radio.checked) radio.checked = false;
+    row.remove();
+}
+
 // Convert <br> to newlines in context textarea for easier editing
 var ctxEl = document.getElementById('ctxEditText');
 if (ctxEl) ctxEl.value = ctxEl.value.replace(/<br\s*\/?>/gi, '\n');
