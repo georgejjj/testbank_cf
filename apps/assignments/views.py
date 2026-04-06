@@ -150,7 +150,7 @@ def assignment_create(request):
         return redirect('assignment_edit', pk=assignment.pk)
 
     chapters = Chapter.objects.prefetch_related('sections')
-    all_questions = Question.objects.select_related('section__chapter').order_by('section__chapter__number', 'question_number')[:500]
+    all_questions = Question.objects.select_related('section__chapter').order_by('section__chapter__number', 'question_number')
     return render(request, 'assignments/instructor/create.html', {
         'chapters': chapters,
         'all_questions': all_questions,
