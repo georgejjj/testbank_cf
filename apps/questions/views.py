@@ -273,6 +273,20 @@ def question_delete(request, pk):
 
 
 @login_required
+def question_remove_context(request, pk):
+    """Detach a question from its context group (does not delete the group)."""
+    if not request.user.is_instructor or request.method != 'POST':
+        return redirect('question_browser')
+
+    question = get_object_or_404(Question, pk=pk)
+    if question.context_group is not None:
+        question.context_group = None
+        question.save(update_fields=['context_group'])
+        messages.success(request, f'Removed context from {question.uid}.')
+    return redirect(request.META.get('HTTP_REFERER') or 'question_browser')
+
+
+@login_required
 def questions_clean(request):
     """Delete ALL questions, sections, chapters, and context groups."""
     if not request.user.is_instructor:

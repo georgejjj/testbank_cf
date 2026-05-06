@@ -80,7 +80,17 @@
     {% endif %}
 
     <div class="mt-2 text-end">
-      <a href="{% url 'question_edit' q.pk %}" class="btn btn-outline-secondary btn-sm">
+      {% if q.context_group %}
+      <form method="post" action="{% url 'question_remove_context' q.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-warning btn-sm"
+                title="Detach this question from its context group (other questions in the group are unaffected)"
+                onclick="return confirm('Remove context from {{ q.uid }}? The shared context group itself will not be deleted.')">
+          <i class="bi bi-scissors me-1"></i>Remove context
+        </button>
+      </form>
+      {% endif %}
+      <a href="{% url 'question_edit' q.pk %}" class="btn btn-outline-secondary btn-sm ms-1">
         <i class="bi bi-pencil me-1"></i>Edit
       </a>
       <form method="post" action="{% url 'question_delete' q.pk %}" class="d-inline ms-1">
