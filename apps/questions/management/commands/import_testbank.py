@@ -16,26 +16,286 @@ def _inline_images(text, chapter_number):
     )
 
 
+_GREEK = [
+    ('β', r'\beta '),
+    ('α', r'\alpha '),
+    ('σ', r'\sigma '),
+    ('Σ', r'\Sigma '),
+    ('μ', r'\mu '),
+    ('ρ', r'\rho '),
+    ('δ', r'\delta '),
+    ('Δ', r'\Delta '),
+    ('γ', r'\gamma '),
+    ('θ', r'\theta '),
+    ('π', r'\pi '),
+    ('Ṝ', r'\bar{R}'),
+]
+
+
+def _find_matching_close(s, open_pos):
+    """Given '(' at open_pos in s, return index of matching ')', or -1."""
+    if open_pos >= len(s) or s[open_pos] != '(':
+        return -1
+    depth = 0
+    for i in range(open_pos, len(s)):
+        if s[i] == '(':
+            depth += 1
+        elif s[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def _find_top_level_slash(s):
+    """Position of the first '/' at paren/brace depth 0, else None."""
+    depth_p = depth_b = 0
+    for i, c in enumerate(s):
+        if c == '(': depth_p += 1
+        elif c == ')': depth_p -= 1
+        elif c == '{': depth_b += 1
+        elif c == '}': depth_b -= 1
+        elif c == '/' and depth_p == 0 and depth_b == 0:
+            return i
+    return None
+
+
+def _is_balanced_outer_parens(s):
+    if not (s.startswith('(') and s.endswith(')')):
+        return False
+    depth = 0
+    for i, c in enumerate(s):
+        if c == '(': depth += 1
+        elif c == ')': depth -= 1
+        if depth == 0 and i < len(s) - 1:
+            return False
+        if depth < 0:
+            return False
+    return depth == 0
+
+
+def _strip_redundant_outer_parens(s):
+    while _is_balanced_outer_parens(s):
+        s = s[1:-1].strip()
+    return s
+
+
+def _convert_fractions(s):
+    """If s (after stripping redundant outer parens) has a top-level /, return \\frac{NUM}{DEN}."""
+    s = s.strip()
+    inner = _strip_redundant_outer_parens(s)
+    slash = _find_top_level_slash(inner)
+    if slash is not None:
+        num = inner[:slash].strip()
+        den = inner[slash + 1:].strip()
+        return r'\frac{' + _maybe_recurse_frac(num) + r'}{' + _maybe_recurse_frac(den) + r'}'
+    return s
+
+
+def _maybe_recurse_frac(s):
+    s = s.strip()
+    inner = _strip_redundant_outer_parens(s)
+    if _find_top_level_slash(inner) is not None:
+        return _convert_fractions(s)
+    return inner
+
+
+def _convert_with_sub_sup(s):
+    """Find " with subscript (Y)" / " with superscript (Y)" and convert, with balanced base."""
+    pat = re.compile(r'\s+with\s+(subscript|superscript)\s+\(')
+    while True:
+        m = pat.search(s)
+        if not m:
+            break
+        # Locate balanced (Y) starting at the '(' captured at m.end()-1
+        y_open = m.end() - 1
+        y_close = _find_matching_close(s, y_open)
+        # The base must end with ')' immediately before m.start()
+        if y_close < 0 or m.start() == 0 or s[m.start() - 1] != ')':
+            # Malformed; skip by neutralizing this occurrence
+            s = s[:m.start()] + '\x00WITH\x00' + s[m.end():]
+            continue
+        x_close = m.start() - 1
+        # Find matching '(' for that ')'
+        depth = 0
+        x_open = -1
+        for i in range(x_close, -1, -1):
+            if s[i] == ')':
+                depth += 1
+            elif s[i] == '(':
+                depth -= 1
+                if depth == 0:
+                    x_open = i
+                    break
+        if x_open < 0:
+            s = s[:m.start()] + '\x00WITH\x00' + s[m.end():]
+            continue
+        x = s[x_open + 1:x_close]
+        y = s[y_open + 1:y_close]
+        op = '_' if m.group(1) == 'subscript' else '^'
+        # Recursively convert nested constructs in x and y first
+        x = _convert_with_sub_sup(x)
+        y = _convert_with_sub_sup(y)
+        # Preserve parens around base if it contains an operator or nested parens
+        if any(c in x for c in '+-*/(),') or x != x.strip():
+            base = '(' + x + ')'
+        else:
+            base = x
+        repl = base + op + '{' + y + '}'
+        s = s[:x_open] + repl + s[y_close + 1:]
+    return s.replace('\x00WITH\x00', ' with ')
+
+
+def _convert_sqrt(s):
+    """square root of (X) with balanced X -> \\sqrt{X}."""
+    pat = re.compile(r'square\s+root\s+of\s+\(')
+    out = []
+    i = 0
+    while i < len(s):
+        m = pat.match(s, i)
+        if m:
+            open_pos = m.end() - 1
+            close_pos = _find_matching_close(s, open_pos)
+            if close_pos > 0:
+                inner = s[open_pos + 1:close_pos]
+                inner = _strip_redundant_outer_parens(inner)
+                inner = _convert_fractions(inner)
+                out.append(r'\sqrt{' + inner + '}')
+                i = close_pos + 1
+                continue
+        out.append(s[i])
+        i += 1
+    return ''.join(out)
+
+
+def _convert_sum(s):
+    """sum of (X) from (a) to (b) -> \\sum_{a}^{b} X (X balanced)."""
+    pat = re.compile(r'sum\s+of\s+\(')
+    out = []
+    i = 0
+    while i < len(s):
+        m = pat.match(s, i)
+        if m:
+            open_pos = m.end() - 1
+            close_pos = _find_matching_close(s, open_pos)
+            if close_pos > 0:
+                body = s[open_pos + 1:close_pos]
+                rest = s[close_pos + 1:]
+                fm = re.match(r'\s+from\s+\(([^()]+)\)\s+to\s+\(([^()]+)\)', rest)
+                if fm:
+                    a = fm.group(1)
+                    b = fm.group(2)
+                    body_s = _strip_redundant_outer_parens(body)
+                    body_s = _convert_fractions(body_s)
+                    out.append(r'\sum_{' + a + r'}^{' + b + r'} ' + body_s)
+                    i = close_pos + 1 + fm.end()
+                    continue
+                # Bare "sum of (X)"
+                body_s = _strip_redundant_outer_parens(body)
+                body_s = _convert_fractions(body_s)
+                out.append(r'\sum ' + body_s)
+                i = close_pos + 1
+                continue
+        out.append(s[i])
+        i += 1
+    return ''.join(out)
+
+
+def _convert_to_root(s):
+    """(X) to the (N) root -> \\sqrt[N]{X} (X balanced)."""
+    out = []
+    i = 0
+    while i < len(s):
+        if s[i] == '(':
+            close = _find_matching_close(s, i)
+            if close > 0:
+                rest = s[close + 1:]
+                m = re.match(r'\s+to\s+the\s+\(([^()]+)\)\s+root', rest)
+                if m:
+                    x = s[i + 1:close]
+                    n = m.group(1)
+                    out.append(r'\sqrt[' + n + r']{' + x + '}')
+                    i = close + 1 + m.end()
+                    continue
+        out.append(s[i])
+        i += 1
+    return ''.join(out)
+
+
 def _formula_to_latex(descr):
-    """Convert Word formula alt-text to LaTeX for MathJax."""
+    """Convert Word formula alt-text to LaTeX for MathJax.
+
+    Handles:
+      (X) with subscript (Y)            -> X_{Y}
+      (X) with superscript (Y)          -> X^{Y}
+      ((X)) with subscript (Y)          -> (X)_{Y}    (preserves outer parens)
+      ((X)) with superscript (Y)        -> (X)^{Y}
+      (X) superscript (Y) subscript (Z) -> X^{Y}_{Z}  (no "with")
+      square root of (X)                -> \\sqrt{X}
+      (X) to the (N) root               -> \\sqrt[N]{X}
+      Σ is over i                        -> \\sum_{i}
+      sum of (X) from (a) to (b)        -> \\sum_{a}^{b} X
+      (NUM/DEN)                         -> \\frac{NUM}{DEN} (recursive)
+      Greek glyphs (β, Σ, σ, ...)        -> \\beta, \\Sigma, \\sigma, ...
+    """
     s = descr.strip()
-    # "with superscript (X)" → ^{X}
-    s = re.sub(r'\)\s*\)\s*with superscript\s*\(([^)]+)\)', r'))^{\1}', s)
-    s = re.sub(r'with superscript\s*\(([^)]+)\)', r'^{\1}', s)
-    # "square root of ((...))" → \sqrt{...}
-    s = re.sub(r'square root of\s*\(\(([^)]+)\)\)', r'\\sqrt{\1}', s)
-    s = re.sub(r'square root of\s*\(([^)]+)\)', r'\\sqrt{\1}', s)
-    # "sum of (...) from (n = 0) to (N)" → \sum_{n=0}^{N} ...
-    s = re.sub(
-        r'sum of\s*\((.+)\)\s*from\s*\(([^)]+)\)\s*to\s*\(([^)]+)\)',
-        r'\\sum_{\2}^{\3} \1',
-        s,
-    )
-    # )N or )n at end of parenthesized group → )^{N}  e.g. (1 + r)N
-    s = re.sub(r'\)([A-Za-z])\b', r')^{\1}', s)
+
+    # 1) Convert (X) with subscript/superscript (Y) using balanced-paren matching.
+    s = _convert_with_sub_sup(s)
+
+    # 2) Convert "(X) superscript (Y) subscript (Z)" forms (no "with"). Iterative regex
+    #    suffices here because in practice these have plain bases.
+    prev = None
+    while prev != s:
+        prev = s
+        s = re.sub(
+            r'\(([^()]*)\)\s+superscript\s+\(([^()]*)\)\s+subscript\s+\(([^()]*)\)',
+            r'\1^{\2}_{\3}', s)
+        s = re.sub(
+            r'\(([^()]*)\)\s+subscript\s+\(([^()]*)\)\s+superscript\s+\(([^()]*)\)',
+            r'\1_{\2}^{\3}', s)
+        s = re.sub(r'\(([^()]*)\)\s+subscript\s+\(([^()]*)\)', r'\1_{\2}', s)
+        s = re.sub(r'\(([^()]*)\)\s+superscript\s+\(([^()]*)\)', r'\1^{\2}', s)
+
+    # 3) Trailing-digit exponent: ")2020" -> ")^{2020}". Run after sub/sup conversion
+    #    so structure is settled; safe because all word/letter exponent cases were
+    #    already expressed as "with superscript".
     s = re.sub(r'\)(\d+)\b', r')^{\1}', s)
+
+    # 4) square root of (X) — balanced parens.
+    s = _convert_sqrt(s)
+
+    # 5) (X) to the (N) root -> \sqrt[N]{X}
+    s = _convert_to_root(s)
+
+    # 6) sum of (X) from (a) to (b) -> \sum_{a}^{b} X
+    s = _convert_sum(s)
+    # Σ is over i -> \sum_{i}
+    s = re.sub(r'(?:Σ|\\Sigma\s*)\s*is\s+over\s+(\w+)', r'\\sum_{\1}', s)
+
+    # Top-level fraction: (NUM/DEN) → \frac{NUM}{DEN}
+    s = _convert_fractions(s)
+
+    # Greek glyph substitutions
+    for ch, latex in _GREEK:
+        s = s.replace(ch, latex)
+    s = re.sub(r'  +', ' ', s)
+    s = re.sub(r'\{\s+', '{', s)
+    s = re.sub(r'\s+\}', '}', s)
+    # Tight spacing for Greek before sub/sup
+    s = re.sub(r'\\(beta|alpha|sigma|Sigma|mu|rho|delta|Delta)\s+([\^_])', r'\\\1\2', s)
+
     # × → \times
-    s = s.replace('×', '\\times ')
+    s = s.replace('×', r'\times ')
+    s = re.sub(r'\\times\s+', r'\\times ', s)
+
+    # Simplify ((X))^{N} → (X)^{N} and ((X))_{N} → (X)_{N}
+    prev = None
+    while prev != s:
+        prev = s
+        s = re.sub(r'\(\(([^()]*)\)\)\^\{([^{}]*)\}', r'(\1)^{\2}', s)
+        s = re.sub(r'\(\(([^()]*)\)\)_\{([^{}]*)\}', r'(\1)_{\2}', s)
+
     return s
 
 
